@@ -59,6 +59,9 @@ class Model(object):
         import string
         self.ID = ''.join(chr(npr.choice([ord(c) for c in (
                 string.ascii_uppercase+string.digits)])) for _ in range(5))
+    
+    def __string__(self):
+        raise NotImplementedError
 
     def init_params(self):
         raise NotImplementedError
@@ -71,6 +74,18 @@ class Model(object):
     
     def get_compiled_funcs(self):
         return self.compiled_funcs
+    
+    def minibatches(self, X, y, batchsize, shuffle=True):
+        assert len(X) == len(y)
+        if(shuffle):
+            inds = np.arange(len(X))
+            np.random.shuffle(inds)
+        for start_ind in range(0, len(X)-batchsize+1, batchsize):
+            if shuffle:
+                batch = inds[start_ind:start_ind+batchsize]
+            else:
+                batch = slice(start_ind, start_ind+batchsize)
+            yield X[batch], y[batch]
 
     def set_data(self, X, y):
         """
@@ -90,18 +105,6 @@ class Model(object):
             self.echo("done.")
         else:
             cost, self.alpha, self.Li = self.train_func(self.X, self.y)
-    
-    def minibatches(self, X, y, batchsize, shuffle=True):
-        assert len(X) == len(y)
-        if(shuffle):
-            inds = np.arange(len(X))
-            np.random.shuffle(inds)
-        for start_ind in range(0, len(X)-batchsize+1, batchsize):
-            if shuffle:
-                batch = inds[start_ind:start_ind+batchsize]
-            else:
-                batch = slice(start_ind, start_ind+batchsize)
-            yield X[batch], y[batch]
 
     def optimize(self, Xv=None, yv=None, funcs=None, visualizer=None, **args):
         obj = 'COST' if 'obj' not in args.keys() else args['obj'].upper()
@@ -229,7 +232,6 @@ class Model(object):
             load_dict = pickle.load(load_f)
         for varn, var in load_dict.items():
             self.__dict__[varn] = var
-        self.NAME = "SCFGP (Sparsity=%d, Fourier Features=%d)"%(self.S, self.M)
 
     def _print_current_evals(self):
         for metric in sorted(self.evals.keys()):
