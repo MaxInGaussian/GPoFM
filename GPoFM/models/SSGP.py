@@ -1,3 +1,10 @@
+"""
+GPoFM: Gaussian Process Training with
+       Optimized Feature Maps for Shift-Invariant Kernels
+Github: https://github.com/MaxInGaussian/GPoFM
+Author: Max W. Y. Lam [maxingaussian@gmail.com]
+"""
+
 import sys, os, string, time
 import numpy as np
 import numpy.random as npr
@@ -5,7 +12,8 @@ import matplotlib.pyplot as plt
 from theano import  shared as Ts, function as Tf, tensor as TT
 from theano.sandbox import linalg as Tlin
 
-from .. import __init__
+from . import Model
+from .. import Optimizer
 
 __all__ = [
     "SSGP",
@@ -33,26 +41,26 @@ class SSGP(Model):
         self.setting['nfeats'] = nfeats
     
     def __str__(self):
-        return "SSGP (Fourier Features=d)"%(m)
+        return "SSGP (Fourier Features=d)"%(self.setting['nfeats'])
 
     def init_params(self):
-        import numpy.random as npr
+        M = self.setting['nfeats']
         const = npr.rand(3)+1e-2
         l = npr.randn(self.D)
-        f = npr.randn(self.D*m)
-        p = 2*np.pi*npr.rand(m)
+        f = npr.randn(self.D*M)
+        p = 2*np.pi*npr.rand(M)
         self.params = Ts(np.concatenate([const, l, f, p]))
     
     def unpack_params(self, params):
-        t_ind = 0
-        a = hyper[0];t_ind+=1
-        b = hyper[1];t_ind+=1
-        c = hyper[2];t_ind+=1
-        l = hyper[t_ind:t_ind+self.D];t_ind+=self.D
-        f = hyper[t_ind:t_ind+self.D*m];t_ind+=self.D*m
-        F = TT.reshape(f, (self.D, m))/np.exp(l[:, None])
-        p = hyper[t_ind:t_ind+m];t_ind+=m
-        P = TT.reshape(p, (1, m))-TT.mean(F, 0)[None, :]
+        t_ind, M = 0, self.setting['nfeats']
+        a = params[0];t_ind+=1
+        b = params[1];t_ind+=1
+        c = params[2];t_ind+=1
+        l = params[t_ind:t_ind+self.D];t_ind+=self.D
+        f = params[t_ind:t_ind+self.D*M];t_ind+=self.D*M
+        F = TT.reshape(f, (self.D, M))/np.exp(l[:, None])
+        p = params[t_ind:t_ind+M];t_ind+=M
+        P = TT.reshape(p, (1, M))-TT.mean(F, 0)[None, :]
         return a, b, c, F, P
     
     def unpack_trained_mats(self, trained_mats):
@@ -71,7 +79,7 @@ class SSGP(Model):
         return [Xs, self.trained_mats['alpha'], self.trained_mats['Li']]
     
     def compile_theano_funcs(self, opt_algo, opt_params):
-        eps, m = 1e-6, self.setting['nfeats']
+        eps, M = 1e-6, self.setting['nfeats']
         kl = lambda mu, sig: sig+mu**2-TT.log(sig)
         self.compiled_funcs = {}
         X, y = TT.dmatrices('X', 'y')
@@ -80,7 +88,7 @@ class SSGP(Model):
         sig2_n, sig_f = TT.exp(2*a), TT.exp(b)
         FF = TT.dot(X, F)+P
         Phi = TT.concatenate((TT.cos(FF), TT.sin(FF)), 1)
-        Phi = sig_f*TT.sqrt(2./m)*Phi
+        Phi = sig_f*TT.sqrt(2./M)*Phi
         noise = TT.log(1+TT.exp(c))
         PhiTPhi = TT.dot(Phi.T, Phi)
         A = PhiTPhi+(sig2_n+eps)*TT.identity_like(PhiTPhi)
@@ -92,8 +100,6 @@ class SSGP(Model):
         mu_f = TT.dot(Phi, alpha)
         var_f = (TT.dot(Phi, Li.T)**2).sum(1)[:, None]
         dsp = noise*(var_f+1)
-        mu_l = TT.sum(TT.mean(l_F, axis=1))
-        sig_l = TT.sum(TT.std(l_F, axis=1))
         mu_w = TT.sum(TT.mean(F, axis=1))
         sig_w = TT.sum(TT.std(F, axis=1))
         hermgauss = np.polynomial.hermite.hermgauss(30)
@@ -104,7 +110,7 @@ class SSGP(Model):
             TT.log(2*np.pi*dsp[:, :, None])+y[:, :, None]**2/dsp[:, :, None])
         enll = herm_w*nlk
         nlml = 2*TT.log(TT.diagonal(L)).sum()+2*enll.sum()+1./sig2_n*(
-            (y**2).sum()-(beta**2).sum())+2*(X.shape[0]-m)*a
+            (y**2).sum()-(beta**2).sum())+2*(X.shape[0]-M)*a
         penelty = kl(mu_w, sig_w)
         obj = (nlml+penelty)/X.shape[0]
         grads = TT.grad(obj, params)
@@ -117,9 +123,9 @@ class SSGP(Model):
         self.compiled_funcs['opt'] = Tf(train_inputs, train_outputs,
             givens=[(params, self.params)], updates=updates)
         Xs, Li, alpha = TT.dmatrices('Xs', 'Li', 'alpha')
-        FFs = TT.dot(Xs, F)+P)
+        FFs = TT.dot(Xs, F)+P
         Phis = TT.concatenate((TT.cos(FFs), TT.sin(FFs)), 1)
-        Phis = sig_f*TT.sqrt(2./m)*Phis
+        Phis = sig_f*TT.sqrt(2./M)*Phis
         mu_pred = TT.dot(Phis, alpha)
         std_pred = (noise*(1+(TT.dot(Phis, Li.T)**2).sum(1)))**0.5
         pred_inputs = [Xs, alpha, Li]

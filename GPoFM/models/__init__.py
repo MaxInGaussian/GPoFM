@@ -1,4 +1,4 @@
-from .. import __init__
+from .. import *
 from .Model import *
 from .SSGP import *
 from .SCFGP import *

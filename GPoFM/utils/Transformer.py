@@ -1,14 +1,13 @@
-################################################################################
-#  SCFGP: Sparsely Correlated Fourier Features Based Gaussian Process
-#  Github: https://github.com/MaxInGaussian/SCFGP
-#  Author: Max W. Y. Lam (maxingaussian@gmail.com)
-################################################################################
+"""
+GPoFM: Gaussian Process Training with
+       Optimized Feature Maps for Shift-Invariant Kernels
+Github: https://github.com/MaxInGaussian/GPoFM
+Author: Max W. Y. Lam [maxingaussian@gmail.com]
+"""
 
 import numpy as np
 from scipy.stats import skew, norm, mstats
 from scipy.optimize import minimize
-
-from .. import __init__
 
 __all__ = [
     "Transformer",
@@ -23,7 +22,7 @@ class Transformer(object):
         "normal",
         "inv-normal",
         "auto-normal",
-        "auto-inv-normal",
+        "auto-uniform",
     ]
     
     data = {}
@@ -39,7 +38,7 @@ class Transformer(object):
             self.data = {"cols": None, "std": 0, "mu":0}
         elif(self.algo == "auto-normal"):
             self.data = {"cols": None, "min": 0, "max":0, "std": 0, "mu":0, "boxcox":0}
-        elif(self.algo == "auto-inv-normal"):
+        elif(self.algo == "auto-uniform"):
             self.data = {"cols": None, "min": 0, "max":0, "std": 0, "mu":0, "boxcox":0}
     
     def fit_transform(self, X):
@@ -82,7 +81,7 @@ class Transformer(object):
             tX = boxcox(tX, lm)
             self.data['mu'] = np.mean(tX, axis=0)
             self.data['std'] = np.std(tX, axis=0)
-        elif(self.algo == "auto-inv-normal"):
+        elif(self.algo == "auto-uniform"):
             self.data['min'] = np.min(tX, axis=0)
             self.data['max'] = np.max(tX, axis=0)
             tX = (tX-self.data["min"])/(self.data["max"]-self.data["min"])
@@ -119,7 +118,7 @@ class Transformer(object):
             lm = self.data['boxcox'][None, :]
             boxcox = lambda x: (np.sign(x)*np.abs(x)**lm-1)/lm
             return (boxcox(tX)-self.data["mu"])/self.data["std"]
-        elif(self.algo == "auto-inv-normal"):
+        elif(self.algo == "auto-uniform"):
             tX = (tX-self.data["min"])/(self.data["max"]-self.data["min"])
             lm = self.data['boxcox'][None, :]
             boxcox = lambda x: (np.sign(x)*np.abs(x)**lm-1)/lm
@@ -138,7 +137,7 @@ class Transformer(object):
             inv_boxcox = lambda x: np.sign(x*lm+1)*np.abs(x*lm+1)**(1./lm)
             tX = X*self.data["std"]+self.data["mu"]
             return inv_boxcox(tX)*(self.data["max"]-self.data["min"])+self.data["min"]
-        elif(self.algo == "auto-inv-normal"):
+        elif(self.algo == "auto-uniform"):
             lm = self.data['boxcox'][None, :]
             inv_boxcox = lambda x: np.sign(x*lm+1)*np.abs(x*lm+1)**(1./lm)
             tX = norm.ppf(X, self.data["mu"], self.data["std"])

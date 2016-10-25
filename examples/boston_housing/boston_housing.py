@@ -1,8 +1,9 @@
-################################################################################
-#  SCFGP: Sparsely Correlated Fourier Features Based Gaussian Process
-#  Github: https://github.com/MaxInGaussian/SCFGP
-#  Author: Max W. Y. Lam (maxingaussian@gmail.com)
-################################################################################
+"""
+GPoFM: Gaussian Process Training with
+       Optimized Feature Maps for Shift-Invariant Kernels
+Github: https://github.com/MaxInGaussian/GPoFM
+Author: Max W. Y. Lam [maxingaussian@gmail.com]
+"""
 
 import os, sys
 import numpy as np
@@ -18,9 +19,9 @@ reps_per_feats = 50
 plot_metric = 'score'
 select_params_metric = 'score'
 select_model_metric = 'score'
-visualizer = None
-# fig = plt.figure(figsize=(8, 6), facecolor='white')
-# visualizer = Visualizer(fig, plot_metric)
+# visualizer = None
+fig = plt.figure(figsize=(8, 6), facecolor='white')
+visualizer = Visualizer(fig, plot_metric)
 nfeats_range = [10, 90]
 algo = {
     'algo': 'adam',

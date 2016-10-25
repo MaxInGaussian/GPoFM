@@ -1,10 +1,16 @@
+"""
+GPoFM: Gaussian Process Training with
+       Optimized Feature Maps for Shift-Invariant Kernels
+Github: https://github.com/MaxInGaussian/GPoFM
+Author: Max W. Y. Lam [maxingaussian@gmail.com]
+"""
+
 import sys, os, string, time
 import numpy as np
+import numpy.random as npr
 import matplotlib.pyplot as plt
-from theano import shared as Ts, function as Tf, tensor as TT
-from theano.sandbox import linalg as Tlin
 
-from .. import __init__
+from .. import *
 
 __all__ = [
     'Model',
@@ -27,14 +33,14 @@ class Model(object):
     '''
 
     ID, verbose, M, N, D = '', False, -1, -1, -1
-    X, y, X_Trans, y_Trans, params, compiled_funcs, trained_mats = [None]*6
+    X, y, X_Trans, y_Trans, params, compiled_funcs, trained_mats = [None]*7
     
     
     def __init__(self, **args):
-        X_trans = 'uniform' if 'X_trans' not in args.keys() else args['X_trans']
-        y_trans = 'normal' if 'y_trans' not in args.keys() else args['y_trans']
+        Xt = 'auto-uniform' if 'X_trans' not in args.keys() else args['X_trans']
+        yt = 'auto-normal' if 'y_trans' not in args.keys() else args['y_trans']
         verbose = False if 'verbose' not in args.keys() else args['verbose']
-        self.trans = {'X': Transformer(X_trans), 'y': Transformer(y_trans)}
+        self.trans = {'X': Transformer(Xt), 'y': Transformer(yt)}
         self.verbose = verbose
         self.generate_instance_identifier()
         self.evals = {
@@ -105,11 +111,11 @@ class Model(object):
         Y: Normally Distributed Outputs
         '''
         self.echo('-'*60, '\nTransforming training data...')
-        self.X = self.X_Trans.fit_transform(X)
-        self.y = self.y_Trans.fit_transform(y)
+        self.X = self.trans['X'].fit_transform(X)
+        self.y = self.trans['y'].fit_transform(y)
         self.echo('done.')
         self.N, self.D = self.X.shape
-        if(self.train_func is None):
+        if(self.trained_mats is None):
             self.echo('-'*60, '\nInitializing hyperparameters...')
             self.init_params()
             self.echo('done.')
@@ -175,7 +181,7 @@ class Model(object):
                 train_inputs = self.pack_train_func_inputs(self.X, self.y)
                 trained_mats = self.compiled_funcs['opt'](*train_inputs)
                 self.trained_mats = self.unpack_trained_mats(trained_mats)
-                self.evals['obj'][1].append(cost)
+                self.evals['obj'][1].append(self.trained_mats['obj'])
             self.evals['time'][1].append(time.time()-train_start_time)
             if(Xv is not None and yv is not None):
                 self.predict(Xv, yv)
@@ -218,14 +224,14 @@ class Model(object):
         self.verbose = verbose
 
     def predict(self, Xs, ys=None):
-        self.Xs = self.X_Trans.transform(Xs)
-        pred_inputs = self.pack_train_func_inputs(self.Xs)
+        self.Xs = self.trans['X'].transform(Xs)
+        pred_inputs = self.pack_pred_func_inputs(self.Xs)
         predicted_mats = self.compiled_funcs['pred'](*pred_inputs)
         self.predicted_mats = self.unpack_predicted_mats(predicted_mats)
         mu_f, std_f = self.predicted_mats['mu_f'], self.predicted_mats['std_f']
-        mu_y = self.y_Trans.backward_transform(mu_f)
-        up_bnd_y = self.y_Trans.backward_transform(mu_f+std_f[:, None])
-        dn_bnd_y = self.y_Trans.backward_transform(mu_f-std_f[:, None])
+        mu_y = self.trans['y'].backward_transform(mu_f)
+        up_bnd_y = self.trans['y'].backward_transform(mu_f+std_f[:, None])
+        dn_bnd_y = self.trans['y'].backward_transform(mu_f-std_f[:, None])
         std_y = 0.5*(up_bnd_y-dn_bnd_y)
         if(ys is not None):
             self.evals['mae'][1].append(np.mean(np.abs(mu_y-ys)))

@@ -1,8 +1,9 @@
-################################################################################
-#  SCFGP: Sparsely Correlated Fourier Features Based Gaussian Process
-#  Github: https://github.com/MaxInGaussian/SCFGP
-#  Author: Max W. Y. Lam (maxingaussian@gmail.com)
-################################################################################
+"""
+GPoFM: Gaussian Process Training with
+       Optimized Feature Maps for Shift-Invariant Kernels
+Github: https://github.com/MaxInGaussian/GPoFM
+Author: Max W. Y. Lam [maxingaussian@gmail.com]
+"""
 
 import numpy as np
 import matplotlib.pyplot as plt

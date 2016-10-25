@@ -25,7 +25,7 @@ else:
     del install_instr
     del theano
 
-from . import utils
-from . import models
+from .utils import *
+from .models import *
 
 __version__ = "0.0.9"

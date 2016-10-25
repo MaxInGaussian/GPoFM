@@ -1,3 +1,10 @@
+"""
+GPoFM: Gaussian Process Training with
+       Optimized Feature Maps for Shift-Invariant Kernels
+Github: https://github.com/MaxInGaussian/GPoFM
+Author: Max W. Y. Lam [maxingaussian@gmail.com]
+"""
+
 import sys, os, string, time
 import numpy as np
 import numpy.random as npr
@@ -5,7 +12,7 @@ import matplotlib.pyplot as plt
 from theano import  shared as Ts, function as Tf, tensor as TT
 from theano.sandbox import linalg as Tlin
 
-from .. import __init__
+from . import Model
 
 __all__ = [
     "SCFGP",
