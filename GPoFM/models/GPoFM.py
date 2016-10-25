@@ -9,6 +9,7 @@ import sys, os, string, time
 import numpy as np
 import numpy.random as npr
 import matplotlib.pyplot as plt
+from theano import shared as Ts, function as Tf, tensor as TT
 
 from .. import *
 
