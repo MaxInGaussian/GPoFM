@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 from GPoFM import *
 
-BEST_MODEL_PATH = 'boston_scfgp.pkl'
+BEST_MODEL_PATH = 'boston.pkl'
 
 ############################ Prior Setting ############################
 reps_per_feats = 50
@@ -79,7 +79,7 @@ for nfeats in nfeats_choices:
     results = {en:[] for en in evals.keys()}
     for round in range(reps_per_feats):
         X_train, y_train, X_valid, y_valid = load_boston_data()
-        model = SCFGP(sparsity=20, nfeats=nfeats)
+        model = SSGP(nfeats=nfeats)
         if(funcs is None):
             model.set_data(X_train, y_train)
             model.optimize(X_valid, y_valid, None, visualizer, **opt_params)
@@ -93,7 +93,7 @@ for nfeats in nfeats_choices:
             print("!"*20, "NEW BEST PREDICTOR", "!"*20)
             print("!"*60)
         else:
-            best_model = SCFGP()
+            best_model = SSGP()
             best_model.load(BEST_MODEL_PATH)
             best_model.predict(X_valid, y_valid)
             if(model.evals[select_model_metric.upper()][1][-1] <
