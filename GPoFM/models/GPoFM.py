@@ -272,7 +272,12 @@ class Model(object):
         return mu_y, std_y
 
     def get_vars_for_prediction(self):
-        return ['setting', 'trans', 'params', 'trained_mats', 'compiled_funcs', evals]
+        return ['setting',
+                'trans',
+                'params',
+                'trained_mats',
+                'compiled_funcs',
+                'evals']
 
     def save(self, path):
         import pickle
