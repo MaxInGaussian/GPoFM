@@ -19,9 +19,9 @@ reps_per_feats = 50
 plot_metric = 'mse'
 select_params_metric = 'cost'
 select_model_metric = 'mse'
-# visualizer = None
-fig = plt.figure(figsize=(8, 6), facecolor='white')
-visualizer = Visualizer(fig, plot_metric)
+visualizer = None
+# fig = plt.figure(figsize=(8, 6), facecolor='white')
+# visualizer = Visualizer(fig, plot_metric)
 nfeats_range = [10, 90]
 algo = {
     'algo': 'adam',
@@ -88,11 +88,8 @@ for nfeats in nfeats_choices:
         else:
             model.set_data(X_train, y_train)
             model.optimize(X_valid, y_valid, funcs, visualizer, **opt_params)
-        print("!"*80)
         if(not os.path.exists(BEST_MODEL_PATH)):
             model.save(BEST_MODEL_PATH)
-            print("!"*30, "NEW BEST PREDICTOR", "!"*30)
-            print("!"*80)
         else:
             best_model = GPoFM(Model().load(BEST_MODEL_PATH))
             best_model.predict(X_valid, y_valid)
@@ -100,6 +97,7 @@ for nfeats in nfeats_choices:
             if(model.evals[select_model_metric][1][-1] <
                 best_model.evals[select_model_metric][1][-1]):
                 model.save(BEST_MODEL_PATH)
+                print("!"*80)
                 print("!"*30, "NEW BEST PREDICTOR", "!"*30)
                 print("!"*80)
         for res in evals.keys():

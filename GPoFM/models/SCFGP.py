@@ -54,7 +54,7 @@ class SCFGP(Model):
         S, M = self.setting['sparsity'], self.setting['nfeats']
         const = npr.rand(3)+1e-2
         l_f = npr.randn(self.D*S)
-        r_f = npr.rand(M*S)/S
+        r_f = npr.rand(M*S)
         l_p = 2*np.pi*npr.rand(S)
         p = 2*np.pi*npr.rand(M)
         self.params = Ts(np.concatenate([const, l_f, r_f, l_p, p]))
@@ -68,7 +68,7 @@ class SCFGP(Model):
         l_f = params[t_ind:t_ind+self.D*S];t_ind+=self.D*S
         l_F = TT.reshape(l_f, (self.D, S))
         r_f = params[t_ind:t_ind+M*S];t_ind+=M*S
-        r_F = TT.reshape(r_f, (M, S))
+        r_F = TT.reshape(r_f, (M, S))/S
         F = l_F.dot(r_F.T)
         l_p = params[t_ind:t_ind+S];t_ind+=S
         l_P = TT.reshape(l_p, (1, S))-TT.mean(l_F, 0)[None, :]
