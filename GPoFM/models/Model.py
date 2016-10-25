@@ -1,3 +1,4 @@
+import sys, os, string, time
 import numpy as np
 import matplotlib.pyplot as plt
 from theano import shared as Ts, function as Tf, tensor as TT
@@ -6,12 +7,12 @@ from theano.sandbox import linalg as Tlin
 from .. import __init__
 
 __all__ = [
-    "Model",
+    'Model',
 ]
 
 class Model(object):
     
-    """
+    '''
     The :class:`Model` class implemented handy functions shared by all machine
     learning models. It is always called as a subclass for any new model.
     
@@ -23,44 +24,31 @@ class Model(object):
         The pre-scaling method used for outpus of training data
     verbose : a bool
         An idicator that determines whether printing training message or not
-    """
+    '''
 
-    ID, NAME, verbose = "", "", True
-    X_scaler, y_scaler = [None]*2
-    M, N, D = -1, -1, -1
-    X, y, hyper, Li, alpha, train_func, pred_func = [None]*7
+    ID, verbose, M, N, D = '', False, -1, -1, -1
+    X, y, X_Trans, y_Trans, params, compiled_funcs, trained_mats = [None]*6
     
     
     def __init__(self, **args):
         X_trans = 'uniform' if 'X_trans' not in args.keys() else args['X_trans']
         y_trans = 'normal' if 'y_trans' not in args.keys() else args['y_trans']
         verbose = False if 'verbose' not in args.keys() else args['verbose']
-        self.X_scaler, self.y_scaler = Scaler(X_trans), Scaler(y_trans)
-        self.evals = {
-            "SCORE": ["Model Selection Score", []],
-            "COST": ["Hyperparameter Selection Cost", []],
-            "MAE": ["Mean Absolute Error", []],
-            "NMAE": ["Normalized Mean Absolute Error", []],
-            "MSE": ["Mean Square Error", []],
-            "NMSE": ["Normalized Mean Square Error", []],
-            "MNLP": ["Mean Negative Log Probability", []],
-            "TIME(s)": ["Training Time", []],
-        } if 'evals' not in args.keys() else args['evals']
+        self.trans = {'X': Transformer(X_trans), 'y': Transformer(y_trans)}
         self.verbose = verbose
-        self.generate_ID()
+        self.generate_instance_identifier()
+        self.evals = {
+            'score': ['Model Selection Score', []],
+            'obj': ['Params Optimization Objective', []],
+            'mae': ['Mean Absolute Error', []],
+            'nmae': ['Normalized Mean Absolute Error', []],
+            'mse': ['Mean Square Error', []],
+            'nmse': ['Normalized Mean Square Error', []],
+            'mnlp': ['Mean Negative Log Probability', []],
+            'time': ['Training Time(s)', []],
+        }
     
-    def echo(self, *arg):
-        if(self.verbose):
-            import sys
-            print(" ".join(map(str, arg)))
-            sys.stdout.flush()
-    
-    def generate_ID(self):
-        import string
-        self.ID = ''.join(chr(npr.choice([ord(c) for c in (
-                string.ascii_uppercase+string.digits)])) for _ in range(5))
-    
-    def __string__(self):
+    def __str__(self):
         raise NotImplementedError
 
     def init_params(self):
@@ -69,8 +57,32 @@ class Model(object):
     def unpack_params(self, params):
         raise NotImplementedError
     
-    def build_theano_models(self, **args):
+    def unpack_trained_mats(self, trained_mats):
         raise NotImplementedError
+    
+    def unpack_predicted_mats(self, predicted_mats):
+        raise NotImplementedError
+    
+    def pack_train_func_inputs(self, X, y):
+        raise NotImplementedError
+    
+    def pack_pred_func_inputs(self, Xs):
+        raise NotImplementedError
+
+    def pack_save_vars(self):
+        raise NotImplementedError
+    
+    def compile_theano_funcs(self, opt_algo, opt_params):
+        raise NotImplementedError
+    
+    def echo(self, *arg):
+        if(self.verbose):
+            print(' '.join(map(str, arg)))
+            sys.stdout.flush()
+    
+    def generate_instance_identifier(self):
+        self.setting = {'id': ''.join(chr(npr.choice([ord(c) for c in (
+                string.ascii_uppercase+string.digits)])) for _ in range(5))}
     
     def get_compiled_funcs(self):
         return self.compiled_funcs
@@ -88,34 +100,33 @@ class Model(object):
             yield X[batch], y[batch]
 
     def set_data(self, X, y):
-        """
+        '''
         X: Normally Distributed Inputs
         Y: Normally Distributed Outputs
-        """
-        self.echo("-"*60, "\nTransforming training data...")
-        self.X_scaler.fit(X)
-        self.y_scaler.fit(y)
-        self.X = self.X_scaler.forward_transform(X)
-        self.y = self.y_scaler.forward_transform(y)
-        self.echo("done.")
+        '''
+        self.echo('-'*60, '\nTransforming training data...')
+        self.X = self.X_Trans.fit_transform(X)
+        self.y = self.y_Trans.fit_transform(y)
+        self.echo('done.')
         self.N, self.D = self.X.shape
-        if('train_func' not in self.__dict__.keys()):
-            self.echo("-"*60, "\nInitializing SCFGP hyperparameters...")
+        if(self.train_func is None):
+            self.echo('-'*60, '\nInitializing hyperparameters...')
             self.init_params()
-            self.echo("done.")
+            self.echo('done.')
         else:
-            cost, self.alpha, self.Li = self.train_func(self.X, self.y)
+            trained_mats = self.compiled_funcs['train'](self.X, self.y)
+            self.trained_mats = self.unpack_trained_mats(trained_mats)
 
     def optimize(self, Xv=None, yv=None, funcs=None, visualizer=None, **args):
-        obj = 'COST' if 'obj' not in args.keys() else args['obj'].upper()
-        obj = 'COST' if obj not in self.evals.keys() else obj
+        obj = 'obj' if 'obj' not in args.keys() else args['obj'].lower()
+        obj = 'obj' if obj not in self.evals.keys() else obj
         algo = {'algo': None} if 'algo' not in args.keys() else args['algo']
         nbatches = 1 if 'nbatches' not in args.keys() else args['nbatches']
         batchsize = 150 if 'batchsize' not in args.keys() else args['batchsize']
         cvrg_tol = 1e-4 if 'cvrg_tol' not in args.keys() else args['cvrg_tol']
         max_cvrg = 18 if 'max_cvrg' not in args.keys() else args['max_cvrg']
         max_iter = 500 if 'max_iter' not in args.keys() else args['max_iter']
-        if(algo['algo'] not in OPT.algos):
+        if(algo['algo'] not in Optimizer.algos):
             algo = {
                 'algo': 'adam',
                 'algo_params': {
@@ -128,44 +139,48 @@ class Model(object):
         for metric in self.evals.keys():
             self.evals[metric][1] = []
         if(funcs is None):
-            self.echo("-"*50, "\nCompiling SCFGP theano model...")
-            self.build_theano_models(algo['algo'], algo['algo_params'])
-            self.echo("done.")
+            self.echo('-'*50, '\nCompiling theano functions...')
+            self.compile_theano_funcs(algo['algo'], algo['algo_params'])
+            self.echo('done.')
         else:
-            self.train_func, self.train_iter_func, self.pred_func = funcs
+            self.compiled_funcs = funcs
         if(visualizer is not None):
             visualizer.model = self
             animate = visualizer.train_with_plot()
         if(Xv is None or yv is None):
-            obj = 'COST'
-            self.evals['MAE'][1].append(0)
-            self.evals['NMAE'][1].append(0)
-            self.evals['MSE'][1].append(0)
-            self.evals['NMSE'][1].append(0)
-            self.evals['MNLP'][1].append(0)
-            self.evals['SCORE'][1].append(0)
+            obj = 'obj'
+            self.evals['mae'][1].append(0)
+            self.evals['nmae'][1].append(0)
+            self.evals['mse'][1].append(0)
+            self.evals['nmse'][1].append(0)
+            self.evals['mnlp'][1].append(0)
+            self.evals['score'][1].append(0)
         self.min_obj_ind = 0
         train_start_time = time.time()
         min_obj_val, argmin_params, cvrg_iter = np.Infinity, self.params, 0
         for iter in range(max_iter):
             if(nbatches > 1):
-                cost_sum, params_list, batch_count = 0, [], 0
+                obj_sum, params_list, batch_count = 0, [], 0
                 for X, y in self.minibatches(self.X, self.y, batchsize):
                     params_list.append(self.params.get_value())
-                    cost, self.alpha, self.Li = self.train_iter_func(X, y)
-                    cost_sum += cost;batch_count += 1
+                    train_inputs = self.pack_train_func_inputs(self.X, self.y)
+                    trained_mats = self.compiled_funcs['opt'](*train_inputs)
+                    self.trained_mats = self.unpack_trained_mats(trained_mats)
+                    obj_sum += self.trained_mats['obj'];batch_count += 1
                     if(batch_count == nbatches):
                         break
                 self.params = Ts(np.median(np.array(params_list), axis=0))
-                self.evals['COST'][1].append(np.double(cost_sum/batch_count))
+                self.evals['obj'][1].append(np.double(obj_sum/batch_count))
             else:
-                cost, self.alpha, self.Li = self.train_iter_func(self.X, self.y)
-                self.evals['COST'][1].append(cost)
-            self.evals['TIME(s)'][1].append(time.time()-train_start_time)
+                train_inputs = self.pack_train_func_inputs(self.X, self.y)
+                trained_mats = self.compiled_funcs['opt'](*train_inputs)
+                self.trained_mats = self.unpack_trained_mats(trained_mats)
+                self.evals['obj'][1].append(cost)
+            self.evals['time'][1].append(time.time()-train_start_time)
             if(Xv is not None and yv is not None):
                 self.predict(Xv, yv)
             if(iter%(max_iter//10) == 1):
-                self.echo("-"*17, "VALIDATION ITERATION", iter, "-"*17)
+                self.echo('-'*17, 'VALIDATION ITERATION', iter, '-'*17)
                 self._print_current_evals()
             if(visualizer is not None):
                 animate(iter)
@@ -177,7 +192,7 @@ class Model(object):
                 else:
                     cvrg_iter = 0
                 min_obj_val = obj_val
-                self.min_obj_ind = len(self.evals['COST'][1])-1
+                self.min_obj_ind = len(self.evals['obj'][1])-1
                 argmin_params = self.params.copy()
             else:
                 cvrg_iter += 1
@@ -187,58 +202,65 @@ class Model(object):
                 randp = np.random.rand()*cvrg_iter/max_cvrg*0.5
                 self.params = (1-randp)*self.params+randp*argmin_params
         self.params = argmin_params.copy()
-        cost, self.alpha, self.Li = self.train_func(self.X, self.y)
-        self.evals['COST'][1].append(np.double(cost))
-        self.evals['TIME(s)'][1].append(time.time()-train_start_time)
+        train_inputs = self.pack_train_func_inputs(self.X, self.y)
+        trained_mats = self.compiled_funcs['train'](*train_inputs)
+        self.trained_mats = self.unpack_trained_mats(trained_mats)
+        self.evals['obj'][1].append(self.trained_mats['obj'])
+        self.evals['time'][1].append(time.time()-train_start_time)
         if(Xv is not None and yv is not None):
             self.predict(Xv, yv)
-        self.min_obj_ind = len(self.evals['COST'][1])-1
-        disp = self.verbose
+        self.min_obj_ind = len(self.evals['obj'][1])-1
+        verbose = self.verbose
         self.verbose = True
-        self.echo("-"*19, "OPTIMIZATION RESULT", "-"*20)
+        self.echo('-'*19, 'OPTIMIZATION RESULT', '-'*20)
         self._print_current_evals()
-        self.echo("-"*60)
-        self.verbose = disp
+        self.echo('-'*60)
+        self.verbose = verbose
 
     def predict(self, Xs, ys=None):
-        self.Xs = self.X_scaler.forward_transform(Xs)
-        mu_f, std_f = self.pred_func(self.Xs, self.alpha, self.Li)
-        mu_y = self.y_scaler.backward_transform(mu_f)
-        up_bnd_y = self.y_scaler.backward_transform(mu_f+std_f[:, None])
-        dn_bnd_y = self.y_scaler.backward_transform(mu_f-std_f[:, None])
+        self.Xs = self.X_Trans.transform(Xs)
+        pred_inputs = self.pack_train_func_inputs(self.Xs)
+        predicted_mats = self.compiled_funcs['pred'](*pred_inputs)
+        self.predicted_mats = self.unpack_predicted_mats(predicted_mats)
+        mu_f, std_f = self.predicted_mats['mu_f'], self.predicted_mats['std_f']
+        mu_y = self.y_Trans.backward_transform(mu_f)
+        up_bnd_y = self.y_Trans.backward_transform(mu_f+std_f[:, None])
+        dn_bnd_y = self.y_Trans.backward_transform(mu_f-std_f[:, None])
         std_y = 0.5*(up_bnd_y-dn_bnd_y)
         if(ys is not None):
-            self.evals['MAE'][1].append(np.mean(np.abs(mu_y-ys)))
-            self.evals['NMAE'][1].append(self.evals['MAE'][1][-1]/np.std(ys))
-            self.evals['MSE'][1].append(np.mean((mu_y-ys)**2.))
-            self.evals['NMSE'][1].append(self.evals['MSE'][1][-1]/np.var(ys))
-            self.evals['MNLP'][1].append(0.5*np.mean(((
+            self.evals['mae'][1].append(np.mean(np.abs(mu_y-ys)))
+            self.evals['nmae'][1].append(self.evals['mae'][1][-1]/np.std(ys))
+            self.evals['mse'][1].append(np.mean((mu_y-ys)**2.))
+            self.evals['nmse'][1].append(self.evals['mse'][1][-1]/np.var(ys))
+            self.evals['mnlp'][1].append(0.5*np.mean(((
                 ys-mu_y)/std_y)**2+np.log(2*np.pi*std_y**2)))
-            self.evals['SCORE'][1].append(
-                self.evals['NMSE'][1][-1]/(1+np.exp(-self.evals['MNLP'][1][-1])))
+            self.evals['score'][1].append(
+                self.evals['nmse'][1][-1]/(1+np.exp(-self.evals['mnlp'][1][-1])))
         return mu_y, std_y
+
+    def get_vars_for_prediction(self):
+        return ['setting', 'trans', 'params', 'trained_mats', 'compiled_funcs']
 
     def save(self, path):
         import pickle
-        save_vars = ['ID', 'M', 'X_scaler', 'y_scaler', 'train_func',
-            'pred_func', 'params', 'alpha', 'Li', 'evals']
+        save_vars = self.get_vars_for_prediction()
         save_dict = {varn: self.__dict__[varn] for varn in save_vars}
-        with open(path, "wb") as save_f:
+        with open(path, 'wb') as save_f:
             pickle.dump(save_dict, save_f, pickle.HIGHEST_PROTOCOL)
 
     def load(self, path):
         import pickle
-        with open(path, "rb") as load_f:
+        with open(path, 'rb') as load_f:
             load_dict = pickle.load(load_f)
         for varn, var in load_dict.items():
             self.__dict__[varn] = var
 
     def _print_current_evals(self):
         for metric in sorted(self.evals.keys()):
-            if(len(self.evals[metric][1]) < len(self.evals['COST'][1])):
+            if(len(self.evals[metric][1]) < len(self.evals['obj'][1])):
                 continue
             best_perform_eval = self.evals[metric][1][self.min_obj_ind]
-            self.echo(self.NAME, "%7s = %.4e"%(metric, best_perform_eval))
+            self.echo(self.__str__(), '%6s = %.4e'%(metric, best_perform_eval))
 
 
 

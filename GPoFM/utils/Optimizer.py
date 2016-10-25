@@ -9,6 +9,12 @@ import theano
 import theano.tensor as TT
 from collections import OrderedDict
 
+from .. import __init__
+
+__all__ = [
+    "Optimizer",
+]
+
 class Optimizer(object):
 
     algos = [

@@ -7,15 +7,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from .. import __init__
+
+__all__ = [
+    "Visualizer",
+]
+
 class Visualizer(object):
     
     " Visualizer (Data Visualization) "
     
     model, fig = None, None
     
-    def __init__(self, fig, eval='NMSE', plot_limit=80):
+    def __init__(self, fig, eval='nmse', plot_limit=80):
         self.fig = fig
-        self.eval = eval.upper()
+        self.eval = eval.lower()
         self.plot_limit = plot_limit
     
     def train_with_plot(self):
@@ -32,7 +38,7 @@ class Visualizer(object):
             pts = 300
             errors = [0.25, 0.39, 0.52, 0.67, 0.84, 1.04, 1.28, 1.64, 2.2]
             Xs = np.linspace(-0.1, 1.1, pts)[:, None]
-            mu, std = self.model.pred_func(Xs, self.model.alpha, self.model.Li)
+            mu, std = self.model.unpack_predicted_mats(Xs, self.model.alpha, self.model.Li)
             mu = mu.ravel()
             std = std.ravel()
             for er in errors:
@@ -61,21 +67,21 @@ class Visualizer(object):
                 data_y1 = ax1.lines[0].get_ydata().tolist()
                 data_x2 = ax2.lines[0].get_xdata().tolist()
                 data_y2 = ax2.lines[0].get_ydata().tolist()
-            data_x1.append(self.model.evals['TIME(s)'][1][-1])
-            cost = self.model.evals['COST'][1][self.model.min_obj_ind]
-            data_y1.append(cost)
+            data_x1.append(self.model.evals['time'][1][-1])
+            obj = self.model.evals['obj'][1][self.model.min_obj_ind]
+            data_y1.append(obj)
             ax1.cla()
             ax1.plot(data_x1[-self.plot_limit:], data_y1[-self.plot_limit:],
-                color='r', linewidth=2.0, label='COST')
+                color='r', linewidth=2.0, label='MIN OBJ')
             handles, labels = ax1.get_legend_handles_labels()
             ax1.legend(handles, labels, loc='upper center',
                 bbox_to_anchor=(0.5, 1.05), ncol=1, fancybox=True)   
-            data_x2.append(self.model.evals['TIME(s)'][1][-1])
+            data_x2.append(self.model.evals['time'][1][-1])
             val = self.model.evals[self.eval][1][self.model.min_obj_ind]
             data_y2.append(val)          
             ax2.cla()
             ax2.plot(data_x2[-self.plot_limit:], data_y2[-self.plot_limit:],
-                color='b', linewidth=2.0, label=self.eval)
+                color='b', linewidth=2.0, label=self.eval.upper())
             handles, labels = ax2.get_legend_handles_labels()
             ax2.legend(handles, labels, loc='upper center',
                 bbox_to_anchor=(0.5, 1.05), ncol=1, fancybox=True)

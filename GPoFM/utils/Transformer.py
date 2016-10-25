@@ -11,12 +11,12 @@ from scipy.optimize import minimize
 from .. import __init__
 
 __all__ = [
-    "Scaler",
+    "Transformer",
 ]
 
-class Scaler(object):
+class Transformer(object):
     
-    " Scaler (Data Preprocessing) "
+    " Transformer (Data Preprocessing) "
 
     algos = [
         "min-max",
@@ -41,6 +41,10 @@ class Scaler(object):
             self.data = {"cols": None, "min": 0, "max":0, "std": 0, "mu":0, "boxcox":0}
         elif(self.algo == "auto-inv-normal"):
             self.data = {"cols": None, "min": 0, "max":0, "std": 0, "mu":0, "boxcox":0}
+    
+    def fit_transform(self, X):
+        self.fit(X)
+        return self.transform(X)
     
     def fit(self, X):
         self.data["cols"] = list(set(range(X.shape[1])).difference(
@@ -102,7 +106,7 @@ class Scaler(object):
             self.data['mu'] = np.mean(tX, axis=0)
             self.data['std'] = np.std(tX, axis=0)
     
-    def forward_transform(self, X):
+    def transform(self, X):
         tX = X[:, self.data["cols"]]
         if(self.algo == "min-max"):
             return (tX-self.data["min"])/(self.data["max"]-self.data["min"])
@@ -121,7 +125,7 @@ class Scaler(object):
             boxcox = lambda x: (np.sign(x)*np.abs(x)**lm-1)/lm
             return norm.cdf(boxcox(tX), self.data["mu"], self.data["std"])
     
-    def backward_transform(self, X):
+    def recover(self, X):
         assert len(self.data["cols"]) == X.shape[1], "Backward Transform Error"
         if(self.algo == "min-max"):
             return X*(self.data["max"]-self.data["min"])+self.data["min"]
