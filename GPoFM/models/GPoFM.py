@@ -55,7 +55,7 @@ class Model(object):
         Idicator that determines whether printing training message or not
     '''
 
-    ID, verbose, M, N, D = '', False, -1, -1, -1
+    ID, verbose, evals_ind, M, N, D = '', False, -1, -1, -1, -1
     X, y, X_Trans, y_Trans, params, compiled_funcs, trained_mats = [None]*7
     
     def __init__(self, **args):
@@ -184,7 +184,7 @@ class Model(object):
             self.evals['nmse'][1].append(0)
             self.evals['mnlp'][1].append(0)
             self.evals['score'][1].append(0)
-        self.min_obj_ind = 0
+        self.evals_ind = 0
         train_start_time = time.time()
         min_obj_val, argmin_params, cvrg_iter = np.Infinity, self.params, 0
         for iter in range(max_iter):
@@ -221,7 +221,7 @@ class Model(object):
                 else:
                     cvrg_iter = 0
                 min_obj_val = obj_val
-                self.min_obj_ind = len(self.evals['obj'][1])-1
+                self.evals_ind = len(self.evals['obj'][1])-1
                 argmin_params = self.params.copy()
             else:
                 cvrg_iter += 1
@@ -236,9 +236,13 @@ class Model(object):
         self.trained_mats = self.unpack_trained_mats(trained_mats)
         self.evals['obj'][1].append(self.trained_mats['obj'])
         self.evals['time'][1].append(time.time()-train_start_time)
+        for metric in self.evals.keys():
+            if(len(self.evals[metric][1]) < len(self.evals['obj'][1])):
+                continue
+            self.evals[metric][1] = [self.evals[metric][1][-1]]
         if(Xv is not None and yv is not None):
             self.predict(Xv, yv)
-        self.min_obj_ind = len(self.evals['obj'][1])-1
+        self.evals_ind = -1
         verbose = self.verbose
         self.verbose = True
         self.echo('-'*19, 'OPTIMIZATION RESULT', '-'*20)
@@ -263,12 +267,12 @@ class Model(object):
             self.evals['nmse'][1].append(self.evals['mse'][1][-1]/np.var(ys))
             self.evals['mnlp'][1].append(0.5*np.mean(((
                 ys-mu_y)/std_y)**2+np.log(2*np.pi*std_y**2)))
-            self.evals['score'][1].append(
-                self.evals['nmse'][1][-1]/(1+np.exp(-self.evals['mnlp'][1][-1])))
+            self.evals['score'][1].append(self.evals['nmse'][1][-1]/(
+                1+np.exp(-self.evals['mnlp'][1][-1])))
         return mu_y, std_y
 
     def get_vars_for_prediction(self):
-        return ['setting', 'trans', 'params', 'trained_mats', 'compiled_funcs']
+        return ['setting', 'trans', 'params', 'trained_mats', 'compiled_funcs', evals]
 
     def save(self, path):
         import pickle
@@ -290,9 +294,23 @@ class Model(object):
         for metric in sorted(self.evals.keys()):
             if(len(self.evals[metric][1]) < len(self.evals['obj'][1])):
                 continue
-            evals = self.evals[metric][1][self.min_obj_ind]
+            eval = self.evals[metric][1][self.evals_ind]
             model_name = self.__str__()
-            aligned = '%'+str(47-len(model_name))+'s = %.4e'%(metric, evals)
+            aligned = ('%6s = %.'+str(44-len(model_name))+'e')%(metric, eval)
+            self.echo(model_name, aligned)
+
+    def _print_evals_comparison(self, evals):
+        for metric in sorted(self.evals.keys()):
+            if(len(self.evals[metric][1]) < len(self.evals['obj'][1]) or
+                len(evals[metric][1]) < len(evals['obj'][1])):
+                continue
+            self.echo('-'*20, 'COMPARISON RESULT', '-'*21)
+            eval1 = self.evals[metric][1][self.evals_ind]
+            eval2 = evals[metric][1][-1]
+            model_name = self.__str__()
+            eval_print_len = 20-len(model_name)//2
+            aligned = ('%6s = %.'+str(eval_print_len)+'e <> '+'%.'+str(
+                40-len(model_name)-eval_print_len)+'e')%(metric, eval1, eval2)
             self.echo(model_name, aligned)
 
 

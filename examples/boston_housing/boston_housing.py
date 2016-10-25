@@ -96,6 +96,7 @@ for nfeats in nfeats_choices:
         else:
             best_model = GPoFM(Model().load(BEST_MODEL_PATH))
             best_model.predict(X_valid, y_valid)
+            best_model._print_evals_comparison(model.evals)
             if(model.evals[select_model_metric][1][-1] <
                 best_model.evals[select_model_metric][1][-1]):
                 model.save(BEST_MODEL_PATH)

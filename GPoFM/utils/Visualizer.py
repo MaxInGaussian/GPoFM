@@ -70,7 +70,7 @@ class Visualizer(object):
                 data_x2 = ax2.lines[0].get_xdata().tolist()
                 data_y2 = ax2.lines[0].get_ydata().tolist()
             data_x1.append(self.model.evals['time'][1][-1])
-            obj = self.model.evals['obj'][1][self.model.min_obj_ind]
+            obj = self.model.evals['obj'][1][self.model.evals_ind]
             data_y1.append(obj)
             ax1.cla()
             ax1.plot(data_x1[-self.plot_limit:], data_y1[-self.plot_limit:],
@@ -79,7 +79,7 @@ class Visualizer(object):
             ax1.legend(handles, labels, loc='upper center',
                 bbox_to_anchor=(0.5, 1.05), ncol=1, fancybox=True)   
             data_x2.append(self.model.evals['time'][1][-1])
-            val = self.model.evals[self.eval][1][self.model.min_obj_ind]
+            val = self.model.evals[self.eval][1][self.model.evals_ind]
             data_y2.append(val)          
             ax2.cla()
             ax2.plot(data_x2[-self.plot_limit:], data_y2[-self.plot_limit:],
