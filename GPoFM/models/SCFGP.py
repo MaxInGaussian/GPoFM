@@ -13,11 +13,11 @@ from theano import  shared as Ts, function as Tf, tensor as TT
 from theano.sandbox import linalg as Tlin
 
 from . import Model
+from .. import Optimizer
 
 __all__ = [
     "SCFGP",
 ]
-
 
 class SCFGP(Model):
     
@@ -27,75 +27,81 @@ class SCFGP(Model):
     
     Parameters
     ----------
-    X_scaling : a string
-        The pre-scaling method used for inputs of training data
-    y_scaling : a string
-        The pre-scaling method used for outpus of training data
+    sparsity : an integer
+        Sparsity of frequency matrix
+    nfeats : an integer
+        Number of correlated Fourier features
+    X_trans : a string
+        Transformation method used for inputs of training data
+    y_trans : a string
+        Transformation method used for outpus of training data
     verbose : a bool
-        An idicator that determines whether printing training message or not
+        Idicator that determines whether printing training message or not
     '''
     
+    setting, compiled_funcs = None, None
+    
     def __init__(self, sparsity=20, nfeats=50, **args):
-        self.S = sparsity
-        self.M = nfeats
         super(SCFGP, self).__init__(**args)
+        self.setting['sparsity'] = sparsity
+        self.setting['nfeats'] = nfeats
     
     def __str__(self):
-        return "SCFGP (Sparsity=%d, Fourier Features=d)"%(self.S, self.M)
+        return "SCFGP (Sparsity=%d, Fourier Features=%d)"%(S, M)
 
     def init_params(self):
-        import numpy.random as npr
-        const = npr.randn(3)
-        l_f = npr.randn(self.D*self.S)
-        r_f = npr.rand(self.M*self.S)
-        l_p = 2*np.pi*npr.rand(self.S)
-        p = 2*np.pi*npr.rand(self.M)
+        S, M = self.setting['sparsity'], self.setting['nfeats']
+        const = npr.rand(3)+1e-2
+        l_f = npr.randn(self.D*S)
+        r_f = npr.rand(M*S)/S
+        l_p = 2*np.pi*npr.rand(S)
+        p = 2*np.pi*npr.rand(M)
         self.params = Ts(np.concatenate([const, l_f, r_f, l_p, p]))
     
     def unpack_params(self, params):
+        S, M = self.setting['sparsity'], self.setting['nfeats']
         t_ind = 0
         a = hyper[0];t_ind+=1
         b = hyper[1];t_ind+=1
         c = hyper[2];t_ind+=1
-        l_f = hyper[t_ind:t_ind+self.D*self.S];t_ind+=self.D*self.S
-        l_F = TT.reshape(l_f, (self.D, self.S))
-        r_f = hyper[t_ind:t_ind+self.M*self.S];t_ind+=self.M*self.S
-        r_F = TT.reshape(r_f, (self.M, self.S))
+        l_f = hyper[t_ind:t_ind+self.D*S];t_ind+=self.D*S
+        l_F = TT.reshape(l_f, (self.D, S))
+        r_f = hyper[t_ind:t_ind+M*S];t_ind+=M*S
+        r_F = TT.reshape(r_f, (M, S))
         F = l_F.dot(r_F.T)
-        l_p = hyper[t_ind:t_ind+self.S];t_ind+=self.S
-        l_P = TT.reshape(l_p, (1, self.S))
-        p = hyper[t_ind:t_ind+self.M];t_ind+=self.M
-        P = TT.reshape(p, (1, self.M))
-        l_FC = l_P-TT.mean(l_F, 0)[None, :]
-        FC = P-TT.mean(F, 0)[None, :]
-        return a, b, c, l_F, F, l_FC, FC
+        l_p = hyper[t_ind:t_ind+S];t_ind+=S
+        l_P = TT.reshape(l_p, (1, S))-TT.mean(l_F, 0)[None, :]
+        p = hyper[t_ind:t_ind+M];t_ind+=M
+        P = TT.reshape(p, (1, M))-TT.mean(F, 0)[None, :]
+        return a, b, c, l_F, F, l_P, P
     
     def unpack_trained_mats(self, trained_mats):
-        raise NotImplementedError
+        return {'obj': np.double(trained_mats[0]),
+                'alpha': trained_mats[1],
+                'Li': trained_mats[2],}
     
     def unpack_predicted_mats(self, predicted_mats):
-        raise NotImplementedError
+        return {'mu_f': predicted_mats[0],
+                'std_f': predicted_mats[1],}
     
     def pack_train_func_inputs(self, X, y):
-        raise NotImplementedError
+        return [X, y]
     
     def pack_pred_func_inputs(self, Xs):
-        raise NotImplementedError
-
-    def pack_save_vars(self):
-        raise NotImplementedError
+        return [Xs, self.trained_mats['alpha'], self.trained_mats['Li']]
     
     def compile_theano_funcs(self, opt_algo, opt_params):
+        S, M = self.setting['sparsity'], self.setting['nfeats']
         epsilon = 1e-6
         kl = lambda mu, sig: sig+mu**2-TT.log(sig)
         X, y = TT.dmatrices('X', 'y')
         params = TT.dvector('params')
-        a, b, c, l_F, F, l_FC, FC = self.unpack_params(params)
+        a, b, c, l_F, F, l_P, P = self.unpack_params(params)
         sig2_n, sig_f = TT.exp(2*a), TT.exp(b)
-        l_FF = TT.dot(X, l_F)+l_FC
-        FF = TT.concatenate((l_FF, TT.dot(X, F)+FC), 1)
+        l_FF = TT.dot(X, l_F)+l_P
+        FF = TT.concatenate((l_FF, TT.dot(X, F)+P), 1)
         Phi = TT.concatenate((TT.cos(FF), TT.sin(FF)), 1)
-        Phi = sig_f*TT.sqrt(2./self.M)*Phi
+        Phi = sig_f*TT.sqrt(2./M)*Phi
         noise = TT.log(1+TT.exp(c))
         PhiTPhi = TT.dot(Phi.T, Phi)
         A = PhiTPhi+(sig2_n+epsilon)*TT.identity_like(PhiTPhi)
@@ -119,8 +125,8 @@ class SCFGP(Model):
             TT.log(2*np.pi*dsp[:, :, None])+y[:, :, None]**2/dsp[:, :, None])
         enll = herm_w*nlk
         nlml = 2*TT.log(TT.diagonal(L)).sum()+2*enll.sum()+1./sig2_n*(
-            (y**2).sum()-(beta**2).sum())+2*(X.shape[0]-self.M)*a
-        penelty = (kl(mu_w, sig_w)*self.M+kl(mu_l, sig_l)*self.S)/(self.S+self.M)
+            (y**2).sum()-(beta**2).sum())+2*(X.shape[0]-M)*a
+        penelty = (kl(mu_w, sig_w)*M+kl(mu_l, sig_l)*S)/(S+M)
         cost = (nlml+penelty)/X.shape[0]
         grads = TT.grad(cost, params)
         updates = getattr(Optimizer, opt_algo)(self.params, grads, **opt_params)
@@ -132,10 +138,10 @@ class SCFGP(Model):
         self.train_iter_func = Tf(train_inputs, train_outputs,
             givens=[(params, self.params)], updates=updates)
         Xs, Li, alpha = TT.dmatrices('Xs', 'Li', 'alpha')
-        l_FFs = TT.dot(Xs, l_F)+l_FC
-        FFs = TT.concatenate((l_FFs, TT.dot(Xs, F)+FC), 1)
+        l_FFs = TT.dot(Xs, l_F)+l_P
+        FFs = TT.concatenate((l_FFs, TT.dot(Xs, F)+P), 1)
         Phis = TT.concatenate((TT.cos(FFs), TT.sin(FFs)), 1)
-        Phis = sig_f*TT.sqrt(2./self.M)*Phis
+        Phis = sig_f*TT.sqrt(2./M)*Phis
         mu_pred = TT.dot(Phis, alpha)
         std_pred = (noise*(1+(TT.dot(Phis, Li.T)**2).sum(1)))**0.5
         pred_inputs = [Xs, alpha, Li]

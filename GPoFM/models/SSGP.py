@@ -28,20 +28,24 @@ class SSGP(Model):
     
     Parameters
     ----------
-    X_scaling : a string
-        The pre-scaling method used for inputs of training data
-    y_scaling : a string
-        The pre-scaling method used for outpus of training data
+    nfeats : an integer
+        Number of correlated Fourier features
+    X_trans : a string
+        Transformation method used for inputs of training data
+    y_trans : a string
+        Transformation method used for outpus of training data
     verbose : a bool
-        An idicator that determines whether printing training message or not
+        Idicator that determines whether printing training message or not
     '''
+    
+    setting, compiled_funcs = None, None
     
     def __init__(self, nfeats=50, **args):
         super(SSGP, self).__init__(**args)
         self.setting['nfeats'] = nfeats
     
     def __str__(self):
-        return "SSGP (Fourier Features=d)"%(self.setting['nfeats'])
+        return "SSGP (Fourier Features=%d)"%(self.setting['nfeats'])
 
     def init_params(self):
         M = self.setting['nfeats']
@@ -64,7 +68,7 @@ class SSGP(Model):
         return a, b, c, F, P
     
     def unpack_trained_mats(self, trained_mats):
-        return {'obj': trained_mats[0],
+        return {'obj': np.double(trained_mats[0]),
                 'alpha': trained_mats[1],
                 'Li': trained_mats[2],}
     

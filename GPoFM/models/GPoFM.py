@@ -13,9 +13,32 @@ import matplotlib.pyplot as plt
 from .. import *
 
 __all__ = [
+    'GPoFM',
     'Model',
 ]
 
+class GPoFM(object):
+    
+    '''
+    The :class:`GPoFM` class is a wrapper for all implemented models that are
+    based on optimized feature maps for shift-invariant kernels.
+    
+    Parameters
+    ----------
+    model : a :class:`Model` instance
+        Model to be wrapped
+    '''
+    
+    setting = None
+    
+    def __init__(self, model):
+        self.setting = model.setting
+        model_name = self.setting['id'].split('-')[0]
+        WrapClass = getattr(sys.modules['GPoFM'], model_name)
+        self.__class__ = type('GPoFM', (WrapClass,), dict(self.__dict__)) 
+        for varn, var in model.__dict__.items():
+            self.__dict__[varn] = var
+    
 class Model(object):
     
     '''
@@ -24,17 +47,16 @@ class Model(object):
     
     Parameters
     ----------
-    X_scaling : a string
-        The pre-scaling method used for inputs of training data
-    y_scaling : a string
-        The pre-scaling method used for outpus of training data
+    X_trans : a string
+        Transformation method used for inputs of training data
+    y_trans : a string
+        Transformation method used for outpus of training data
     verbose : a bool
-        An idicator that determines whether printing training message or not
+        Idicator that determines whether printing training message or not
     '''
 
     ID, verbose, M, N, D = '', False, -1, -1, -1
     X, y, X_Trans, y_Trans, params, compiled_funcs, trained_mats = [None]*7
-    
     
     def __init__(self, **args):
         Xt = 'auto-uniform' if 'X_trans' not in args.keys() else args['X_trans']
@@ -87,7 +109,8 @@ class Model(object):
             sys.stdout.flush()
     
     def generate_instance_identifier(self):
-        self.setting = {'id': ''.join(chr(npr.choice([ord(c) for c in (
+        self.setting = {'id': self.__class__.__name__+'-'+''.join(
+            chr(npr.choice([ord(c) for c in (
                 string.ascii_uppercase+string.digits)])) for _ in range(5))}
     
     def get_compiled_funcs(self):
@@ -126,14 +149,14 @@ class Model(object):
     def optimize(self, Xv=None, yv=None, funcs=None, visualizer=None, **args):
         obj = 'obj' if 'obj' not in args.keys() else args['obj'].lower()
         obj = 'obj' if obj not in self.evals.keys() else obj
-        algo = {'algo': None} if 'algo' not in args.keys() else args['algo']
+        opt_algo = {'algo': None} if 'algo' not in args.keys() else args['algo']
         nbatches = 1 if 'nbatches' not in args.keys() else args['nbatches']
         batchsize = 150 if 'batchsize' not in args.keys() else args['batchsize']
         cvrg_tol = 1e-4 if 'cvrg_tol' not in args.keys() else args['cvrg_tol']
         max_cvrg = 18 if 'max_cvrg' not in args.keys() else args['max_cvrg']
         max_iter = 500 if 'max_iter' not in args.keys() else args['max_iter']
-        if(algo['algo'] not in Optimizer.algos):
-            algo = {
+        if(opt_algo['algo'] not in Optimizer.algos):
+            opt_algo = {
                 'algo': 'adam',
                 'algo_params': {
                     'learning_rate':0.01,
@@ -146,7 +169,7 @@ class Model(object):
             self.evals[metric][1] = []
         if(funcs is None):
             self.echo('-'*50, '\nCompiling theano functions...')
-            self.compile_theano_funcs(algo['algo'], algo['algo_params'])
+            self.compile_theano_funcs(opt_algo['algo'], opt_algo['algo_params'])
             self.echo('done.')
         else:
             self.compiled_funcs = funcs
@@ -229,9 +252,9 @@ class Model(object):
         predicted_mats = self.compiled_funcs['pred'](*pred_inputs)
         self.predicted_mats = self.unpack_predicted_mats(predicted_mats)
         mu_f, std_f = self.predicted_mats['mu_f'], self.predicted_mats['std_f']
-        mu_y = self.trans['y'].backward_transform(mu_f)
-        up_bnd_y = self.trans['y'].backward_transform(mu_f+std_f[:, None])
-        dn_bnd_y = self.trans['y'].backward_transform(mu_f-std_f[:, None])
+        mu_y = self.trans['y'].recover(mu_f)
+        up_bnd_y = self.trans['y'].recover(mu_f+std_f[:, None])
+        dn_bnd_y = self.trans['y'].recover(mu_f-std_f[:, None])
         std_y = 0.5*(up_bnd_y-dn_bnd_y)
         if(ys is not None):
             self.evals['mae'][1].append(np.mean(np.abs(mu_y-ys)))
@@ -251,6 +274,7 @@ class Model(object):
         import pickle
         save_vars = self.get_vars_for_prediction()
         save_dict = {varn: self.__dict__[varn] for varn in save_vars}
+        sys.setrecursionlimit(10000)
         with open(path, 'wb') as save_f:
             pickle.dump(save_dict, save_f, pickle.HIGHEST_PROTOCOL)
 

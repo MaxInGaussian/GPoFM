@@ -16,9 +16,9 @@ BEST_MODEL_PATH = 'boston.pkl'
 
 ############################ Prior Setting ############################
 reps_per_feats = 50
-plot_metric = 'score'
-select_params_metric = 'score'
-select_model_metric = 'score'
+plot_metric = 'mse'
+select_params_metric = 'cost'
+select_model_metric = 'mse'
 # visualizer = None
 fig = plt.figure(figsize=(8, 6), facecolor='white')
 visualizer = Visualizer(fig, plot_metric)
@@ -66,21 +66,21 @@ X_train, y_train, X_valid, y_valid = load_boston_data()
 nfeats_range_length = nfeats_range[1]-nfeats_range[0]
 nfeats_choices = [nfeats_range[0]+(i*nfeats_range_length)//8 for i in range(5)]
 evals = {
-    "SCORE": ["Model Selection Score", []],
-    "COST": ["Hyperparameter Selection Cost", []],
-    "MAE": ["Mean Absolute Error", []],
-    "NMAE": ["Normalized Mean Absolute Error", []],
-    "MSE": ["Mean Square Error", []],
-    "NMSE": ["Normalized Mean Square Error", []],
-    "MNLP": ["Mean Negative Log Probability", []],
-    "TIME(s)": ["Training Time", []],
+    'score': ['Model Selection Score', []],
+    'obj': ['Params Optimization Objective', []],
+    'mae': ['Mean Absolute Error', []],
+    'nmae': ['Normalized Mean Absolute Error', []],
+    'mse': ['Mean Square Error', []],
+    'nmse': ['Normalized Mean Square Error', []],
+    'mnlp': ['Mean Negative Log Probability', []],
+    'time': ['Training Time(s)', []],
 }
 for nfeats in nfeats_choices:
     funcs = None
     results = {en:[] for en in evals.keys()}
     for round in range(reps_per_feats):
         X_train, y_train, X_valid, y_valid = load_boston_data()
-        model = SSGP(nfeats=nfeats)
+        model = GPoFM(SSGP(nfeats=nfeats))
         if(funcs is None):
             model.set_data(X_train, y_train)
             model.optimize(X_valid, y_valid, None, visualizer, **opt_params)
@@ -94,11 +94,11 @@ for nfeats in nfeats_choices:
             print("!"*20, "NEW BEST PREDICTOR", "!"*20)
             print("!"*60)
         else:
-            best_model = SSGP()
+            best_model = GPoFM()
             best_model.load(BEST_MODEL_PATH)
             best_model.predict(X_valid, y_valid)
-            if(model.evals[select_model_metric.upper()][1][-1] <
-                best_model.evals[select_model_metric.upper()][1][-1]):
+            if(model.evals[select_model_metric][1][-1] <
+                best_model.evals[select_model_metric][1][-1]):
                 model.save(BEST_MODEL_PATH)
                 print("!"*20, "NEW BEST PREDICTOR", "!"*20)
                 print("!"*60)

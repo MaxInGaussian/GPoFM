@@ -32,20 +32,21 @@ class Visualizer(object):
             return self.train_with_eval_plot()
     
     def train_with_1d_plot(self):
-        self.fig.suptitle(self.model.NAME, fontsize=15)
+        self.fig.suptitle(self.model.__str__(), fontsize=15)
         ax = self.fig.add_subplot(111)
         def animate(i):
             ax.cla()
             pts = 300
             errors = [0.25, 0.39, 0.52, 0.67, 0.84, 1.04, 1.28, 1.64, 2.2]
-            Xs = np.linspace(-0.1, 1.1, pts)[:, None]
-            mu, std = self.model.unpack_predicted_mats(Xs, self.model.alpha, self.model.Li)
-            mu = mu.ravel()
-            std = std.ravel()
+            Xs = np.linspace(0., 1., pts)[:, None]
+            pred_inputs = self.model.pack_train_func_inputs(Xs)
+            predicted_mats = self.model.compiled_funcs['pred'](*pred_inputs)
+            predicted_mats = self.model.unpack_predicted_mats(predicted_mats)
+            mu, std = predicted_mats['mu_f'], predicted_mats['std_f']
             for er in errors:
                 ax.fill_between(Xs[:, 0], mu-er*std, mu+er*std,
                                 alpha=((3-er)/5.5)**1.7, facecolor='blue',
-                                linewidth=0.0)
+                                linewidth=1e-3)
             ax.plot(Xs[:, 0], mu, alpha=0.8, c='black')
             ax.errorbar(self.model.X[:, 0],
                 self.model.y.ravel(), fmt='r.', markersize=5, alpha=0.6)
@@ -56,7 +57,7 @@ class Visualizer(object):
         return animate
     
     def train_with_eval_plot(self):
-        self.fig.suptitle(self.model.NAME, fontsize=15)
+        self.fig.suptitle(self.model.__str__(), fontsize=15)
         ax1 = self.fig.add_subplot(211)
         ax2 = self.fig.add_subplot(212)
         plt.xlabel('TIME(s)', fontsize=13)
