@@ -178,12 +178,12 @@ class Model(object):
             animate = visualizer.train_with_plot()
         if(Xv is None or yv is None):
             obj = 'obj'
-            self.evals['mae'][1].append(0)
-            self.evals['nmae'][1].append(0)
-            self.evals['mse'][1].append(0)
-            self.evals['nmse'][1].append(0)
-            self.evals['mnlp'][1].append(0)
-            self.evals['score'][1].append(0)
+            self.evals['mae'][1].append(np.Infinity)
+            self.evals['nmae'][1].append(np.Infinity)
+            self.evals['mse'][1].append(np.Infinity)
+            self.evals['nmse'][1].append(np.Infinity)
+            self.evals['mnlp'][1].append(np.Infinity)
+            self.evals['score'][1].append(np.Infinity)
         self.evals_ind = 0
         train_start_time = time.time()
         min_obj_val, argmin_params, cvrg_iter = np.Infinity, self.params, 0
@@ -236,12 +236,10 @@ class Model(object):
         self.trained_mats = self.unpack_trained_mats(trained_mats)
         self.evals['obj'][1].append(self.trained_mats['obj'])
         self.evals['time'][1].append(time.time()-train_start_time)
-        for metric in self.evals.keys():
-            if(len(self.evals[metric][1]) < len(self.evals['obj'][1])):
-                continue
-            self.evals[metric][1] = [self.evals[metric][1][-1]]
         if(Xv is not None and yv is not None):
             self.predict(Xv, yv)
+        for metric in self.evals.keys():
+            self.evals[metric][1] = [self.evals[metric][1][-1]]
         self.evals_ind = -1
         verbose = self.verbose
         self.verbose = True
@@ -297,19 +295,16 @@ class Model(object):
 
     def _print_current_evals(self):
         for metric in sorted(self.evals.keys()):
-            if(len(self.evals[metric][1]) < len(self.evals['obj'][1])):
-                continue
             eval = self.evals[metric][1][self.evals_ind]
             model_name = self.__str__()
             aligned = ('%6s = %.'+str(44-len(model_name))+'e')%(metric, eval)
             self.echo(model_name, aligned)
 
     def _print_evals_comparison(self, evals):
+        verbose = self.verbose
+        self.verbose = True
+        self.echo('-'*20, 'COMPARISON RESULT', '-'*21)
         for metric in sorted(self.evals.keys()):
-            if(len(self.evals[metric][1]) < len(self.evals['obj'][1]) or
-                len(evals[metric][1]) < len(evals['obj'][1])):
-                continue
-            self.echo('-'*20, 'COMPARISON RESULT', '-'*21)
             eval1 = self.evals[metric][1][self.evals_ind]
             eval2 = evals[metric][1][-1]
             model_name = self.__str__()
@@ -317,6 +312,8 @@ class Model(object):
             aligned = ('%6s = %.'+str(eval_print_len)+'e <> '+'%.'+str(
                 40-len(model_name)-eval_print_len)+'e')%(metric, eval1, eval2)
             self.echo(model_name, aligned)
+        self.echo('-'*60)
+        self.verbose = verbose
 
 
 
