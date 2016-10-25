@@ -9,7 +9,7 @@ import sys, os, string, time
 import numpy as np
 import numpy.random as npr
 import matplotlib.pyplot as plt
-from theano import  shared as Ts, function as Tf, tensor as TT
+from theano import shared as Ts, function as Tf, tensor as TT
 from theano.sandbox import linalg as Tlin
 
 from . import Model
@@ -83,9 +83,9 @@ class SSGP(Model):
         return [Xs, self.trained_mats['alpha'], self.trained_mats['Li']]
     
     def compile_theano_funcs(self, opt_algo, opt_params):
+        self.compiled_funcs = {}
         eps, M = 1e-6, self.setting['nfeats']
         kl = lambda mu, sig: sig+mu**2-TT.log(sig)
-        self.compiled_funcs = {}
         X, y = TT.dmatrices('X', 'y')
         params = TT.dvector('params')
         a, b, c, F, P = self.unpack_params(params)

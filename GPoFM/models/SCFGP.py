@@ -9,7 +9,7 @@ import sys, os, string, time
 import numpy as np
 import numpy.random as npr
 import matplotlib.pyplot as plt
-from theano import  shared as Ts, function as Tf, tensor as TT
+from theano import shared as Ts, function as Tf, tensor as TT
 from theano.sandbox import linalg as Tlin
 
 from . import Model
@@ -47,6 +47,7 @@ class SCFGP(Model):
         self.setting['nfeats'] = nfeats
     
     def __str__(self):
+        S, M = self.setting['sparsity'], self.setting['nfeats']
         return "SCFGP (Sparsity=%d, Fourier Features=%d)"%(S, M)
 
     def init_params(self):
@@ -61,17 +62,17 @@ class SCFGP(Model):
     def unpack_params(self, params):
         S, M = self.setting['sparsity'], self.setting['nfeats']
         t_ind = 0
-        a = hyper[0];t_ind+=1
-        b = hyper[1];t_ind+=1
-        c = hyper[2];t_ind+=1
-        l_f = hyper[t_ind:t_ind+self.D*S];t_ind+=self.D*S
+        a = params[0];t_ind+=1
+        b = params[1];t_ind+=1
+        c = params[2];t_ind+=1
+        l_f = params[t_ind:t_ind+self.D*S];t_ind+=self.D*S
         l_F = TT.reshape(l_f, (self.D, S))
-        r_f = hyper[t_ind:t_ind+M*S];t_ind+=M*S
+        r_f = params[t_ind:t_ind+M*S];t_ind+=M*S
         r_F = TT.reshape(r_f, (M, S))
         F = l_F.dot(r_F.T)
-        l_p = hyper[t_ind:t_ind+S];t_ind+=S
+        l_p = params[t_ind:t_ind+S];t_ind+=S
         l_P = TT.reshape(l_p, (1, S))-TT.mean(l_F, 0)[None, :]
-        p = hyper[t_ind:t_ind+M];t_ind+=M
+        p = params[t_ind:t_ind+M];t_ind+=M
         P = TT.reshape(p, (1, M))-TT.mean(F, 0)[None, :]
         return a, b, c, l_F, F, l_P, P
     
@@ -91,6 +92,7 @@ class SCFGP(Model):
         return [Xs, self.trained_mats['alpha'], self.trained_mats['Li']]
     
     def compile_theano_funcs(self, opt_algo, opt_params):
+        self.compiled_funcs = {}
         S, M = self.setting['sparsity'], self.setting['nfeats']
         epsilon = 1e-6
         kl = lambda mu, sig: sig+mu**2-TT.log(sig)
@@ -127,15 +129,15 @@ class SCFGP(Model):
         nlml = 2*TT.log(TT.diagonal(L)).sum()+2*enll.sum()+1./sig2_n*(
             (y**2).sum()-(beta**2).sum())+2*(X.shape[0]-M)*a
         penelty = (kl(mu_w, sig_w)*M+kl(mu_l, sig_l)*S)/(S+M)
-        cost = (nlml+penelty)/X.shape[0]
-        grads = TT.grad(cost, params)
+        obj = (nlml+penelty)/X.shape[0]
+        grads = TT.grad(obj, params)
         updates = getattr(Optimizer, opt_algo)(self.params, grads, **opt_params)
         updates = getattr(Optimizer, 'apply_momentum')(updates, momentum=0.9)
         train_inputs = [X, y]
-        train_outputs = [cost, alpha, Li]
-        self.train_func = Tf(train_inputs, train_outputs,
+        train_outputs = [obj, alpha, Li]
+        self.compiled_funcs['train'] = Tf(train_inputs, train_outputs,
             givens=[(params, self.params)])
-        self.train_iter_func = Tf(train_inputs, train_outputs,
+        self.compiled_funcs['opt'] = Tf(train_inputs, train_outputs,
             givens=[(params, self.params)], updates=updates)
         Xs, Li, alpha = TT.dmatrices('Xs', 'Li', 'alpha')
         l_FFs = TT.dot(Xs, l_F)+l_P
@@ -146,5 +148,5 @@ class SCFGP(Model):
         std_pred = (noise*(1+(TT.dot(Phis, Li.T)**2).sum(1)))**0.5
         pred_inputs = [Xs, alpha, Li]
         pred_outputs = [mu_pred, std_pred]
-        self.pred_func = Tf(pred_inputs, pred_outputs,
+        self.compiled_funcs['pred'] = Tf(pred_inputs, pred_outputs,
             givens=[(params, self.params)])

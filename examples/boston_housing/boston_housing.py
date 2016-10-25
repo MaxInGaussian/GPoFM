@@ -80,7 +80,7 @@ for nfeats in nfeats_choices:
     results = {en:[] for en in evals.keys()}
     for round in range(reps_per_feats):
         X_train, y_train, X_valid, y_valid = load_boston_data()
-        model = GPoFM(SSGP(nfeats=nfeats))
+        model = GPoFM(SCFGP(nfeats=nfeats))
         if(funcs is None):
             model.set_data(X_train, y_train)
             model.optimize(X_valid, y_valid, None, visualizer, **opt_params)
@@ -88,11 +88,11 @@ for nfeats in nfeats_choices:
         else:
             model.set_data(X_train, y_train)
             model.optimize(X_valid, y_valid, funcs, visualizer, **opt_params)
-        print("!"*60)
+        print("!"*80)
         if(not os.path.exists(BEST_MODEL_PATH)):
             model.save(BEST_MODEL_PATH)
-            print("!"*20, "NEW BEST PREDICTOR", "!"*20)
-            print("!"*60)
+            print("!"*30, "NEW BEST PREDICTOR", "!"*30)
+            print("!"*80)
         else:
             best_model = GPoFM(Model().load(BEST_MODEL_PATH))
             best_model.predict(X_valid, y_valid)
@@ -100,8 +100,8 @@ for nfeats in nfeats_choices:
             if(model.evals[select_model_metric][1][-1] <
                 best_model.evals[select_model_metric][1][-1]):
                 model.save(BEST_MODEL_PATH)
-                print("!"*20, "NEW BEST PREDICTOR", "!"*20)
-                print("!"*60)
+                print("!"*30, "NEW BEST PREDICTOR", "!"*30)
+                print("!"*80)
         for res in evals.keys():
             results[res].append(model.evals[res][1][-1])
     for en in evals.keys():

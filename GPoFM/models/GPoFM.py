@@ -133,13 +133,13 @@ class Model(object):
         X: Normally Distributed Inputs
         Y: Normally Distributed Outputs
         '''
-        self.echo('-'*60, '\nTransforming training data...')
+        self.echo('-'*80, '\nTransforming training data...')
         self.X = self.trans['X'].fit_transform(X)
         self.y = self.trans['y'].fit_transform(y)
         self.echo('done.')
         self.N, self.D = self.X.shape
         if(self.trained_mats is None):
-            self.echo('-'*60, '\nInitializing hyperparameters...')
+            self.echo('-'*80, '\nInitializing hyperparameters...')
             self.init_params()
             self.echo('done.')
         else:
@@ -168,7 +168,7 @@ class Model(object):
         for metric in self.evals.keys():
             self.evals[metric][1] = []
         if(funcs is None):
-            self.echo('-'*50, '\nCompiling theano functions...')
+            self.echo('-'*80, '\nCompiling theano functions...')
             self.compile_theano_funcs(opt_algo['algo'], opt_algo['algo_params'])
             self.echo('done.')
         else:
@@ -209,7 +209,7 @@ class Model(object):
             if(Xv is not None and yv is not None):
                 self.predict(Xv, yv)
             if(iter%(max_iter//10) == 1):
-                self.echo('-'*17, 'VALIDATION ITERATION', iter, '-'*17)
+                self.echo('-'*26, 'VALIDATION ITERATION', iter, '-'*27)
                 self._print_current_evals()
             if(visualizer is not None):
                 animate(iter)
@@ -243,9 +243,8 @@ class Model(object):
         self.evals_ind = -1
         verbose = self.verbose
         self.verbose = True
-        self.echo('-'*19, 'OPTIMIZATION RESULT', '-'*20)
+        self.echo('-'*29, 'OPTIMIZATION RESULT', '-'*30)
         self._print_current_evals()
-        self.echo('-'*60)
         self.verbose = verbose
 
     def predict(self, Xs, ys=None):
@@ -297,22 +296,24 @@ class Model(object):
         for metric in sorted(self.evals.keys()):
             eval = self.evals[metric][1][self.evals_ind]
             model_name = self.__str__()
-            aligned = ('%6s = %.'+str(44-len(model_name))+'e')%(metric, eval)
+            float_len = 64-len(model_name) if eval > 0 else 63-len(model_name)
+            aligned = ('%6s = %.'+str(float_len)+'e')%(metric, eval)
             self.echo(model_name, aligned)
 
     def _print_evals_comparison(self, evals):
         verbose = self.verbose
         self.verbose = True
-        self.echo('-'*20, 'COMPARISON RESULT', '-'*21)
+        self.echo('-'*30, 'COMPARISON RESULT', '-'*31)
         for metric in sorted(self.evals.keys()):
             eval1 = self.evals[metric][1][self.evals_ind]
             eval2 = evals[metric][1][-1]
             model_name = self.__str__()
-            eval_print_len = 17-len(model_name)//2
-            aligned = ('%6s = %.'+str(eval_print_len)+'e <> '+'%.'+str(
-                34-len(model_name)-eval_print_len)+'e')%(metric, eval1, eval2)
+            float_len = 27-len(model_name)//2
+            float_len1 = float_len-1 if eval1 < 0 else float_len
+            float_len2 = float_len-1 if eval2 < 0 else float_len
+            aligned = ('%6s = %.'+str(float_len1)+'e <> '+'%.'+str(
+                float_len2+len(model_name)%2)+'e')%(metric, eval1, eval2)
             self.echo(model_name, aligned)
-        self.echo('-'*60)
         self.verbose = verbose
 
 
