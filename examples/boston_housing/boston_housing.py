@@ -94,8 +94,7 @@ for nfeats in nfeats_choices:
             print("!"*20, "NEW BEST PREDICTOR", "!"*20)
             print("!"*60)
         else:
-            best_model = GPoFM()
-            best_model.load(BEST_MODEL_PATH)
+            best_model = GPoFM(Model().load(BEST_MODEL_PATH))
             best_model.predict(X_valid, y_valid)
             if(model.evals[select_model_metric][1][-1] <
                 best_model.evals[select_model_metric][1][-1]):

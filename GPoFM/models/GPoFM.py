@@ -284,6 +284,7 @@ class Model(object):
             load_dict = pickle.load(load_f)
         for varn, var in load_dict.items():
             self.__dict__[varn] = var
+        return self
 
     def _print_current_evals(self):
         for metric in sorted(self.evals.keys()):
