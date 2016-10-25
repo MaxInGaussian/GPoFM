@@ -308,9 +308,9 @@ class Model(object):
             eval1 = self.evals[metric][1][self.evals_ind]
             eval2 = evals[metric][1][-1]
             model_name = self.__str__()
-            eval_print_len = 20-len(model_name)//2
+            eval_print_len = 17-len(model_name)//2
             aligned = ('%6s = %.'+str(eval_print_len)+'e <> '+'%.'+str(
-                40-len(model_name)-eval_print_len)+'e')%(metric, eval1, eval2)
+                34-len(model_name)-eval_print_len)+'e')%(metric, eval1, eval2)
             self.echo(model_name, aligned)
         self.echo('-'*60)
         self.verbose = verbose
