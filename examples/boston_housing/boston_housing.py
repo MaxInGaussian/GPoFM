@@ -8,7 +8,8 @@ import os, sys
 import numpy as np
 import numpy.random as npr
 import matplotlib.pyplot as plt
-from SCFGP import SCFGP, Visualizer
+
+from GPoFM import *
 
 BEST_MODEL_PATH = 'boston_scfgp.pkl'
 
