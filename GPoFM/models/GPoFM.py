@@ -290,8 +290,10 @@ class Model(object):
         for metric in sorted(self.evals.keys()):
             if(len(self.evals[metric][1]) < len(self.evals['obj'][1])):
                 continue
-            best_perform_eval = self.evals[metric][1][self.min_obj_ind]
-            self.echo(self.__str__(), '%6s = %.4e'%(metric, best_perform_eval))
+            evals = self.evals[metric][1][self.min_obj_ind]
+            model_name = self.__str__()
+            aligned = '%'+str(47-len(model_name))+'s = %.4e'%(metric, evals)
+            self.echo(model_name, aligned)
 
 
 
