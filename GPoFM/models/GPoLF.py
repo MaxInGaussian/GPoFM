@@ -1,8 +1,8 @@
 """
-GPoFS: Gaussian Process Training with
-       Optimized Feature Saps for Shift-Invariant Kernels
-Github: https://github.com/SaxInGaussian/GPoFS
-Author: Sax W. Y. Lam [maxingaussian@gmail.com]
+GPoFM: Gaussian Process Training with
+       Optimized Feature Maps for Shift-Invariant Kernels
+Github: https://github.com/MaxInGaussian/GPoFM
+Author: Max W. Y. Lam [maxingaussian@gmail.com]
 """
 
 import sys, os, string, time
@@ -16,20 +16,20 @@ from . import Model
 from .. import Optimizer
 
 __all__ = [
-    "SSGP",
+    "GPoLF",
 ]
 
 
-class SSGP(Model):
+class GPoLF(Model):
     
     '''
-    The :class:`SSGP` class implemented handy functions shared by all machine
-    learning models. It is always called as a subclass for any new model.
+    The :class:`GPoLF` class implemented a GPoFM model:
+        Gaussian process Optimizing Laplace Features (GPoLF)
     
     Parameters
     ----------
-    sparsity : an integer
-        Sparsity of frequency matrix
+    nfeats : an integer
+        Number of Laplace Features
     X_trans : a string
         Transformation method used for inputs of training data
     y_trans : a string
@@ -40,15 +40,15 @@ class SSGP(Model):
     
     setting, compiled_funcs = None, None
     
-    def __init__(self, sparsity=50, **args):
-        super(SSGP, self).__init__(**args)
-        self.setting['sparsity'] = sparsity
+    def __init__(self, nfeats=50, **args):
+        super(GPoLF, self).__init__(**args)
+        self.setting['nfeats'] = nfeats
     
     def __str__(self):
-        return "SSGP (Sparsity = %d)"%(self.setting['sparsity'])
+        return "GPoLF (Laplace = %d)"%(self.setting['nfeats'])
 
     def init_params(self):
-        S = self.setting['sparsity']
+        S = self.setting['nfeats']
         const = np.zeros(2)
         l = npr.randn(self.D)
         f = npr.randn(self.D*S)
@@ -56,7 +56,7 @@ class SSGP(Model):
         self.params = Ts(np.concatenate([const, l, f, p]))
     
     def unpack_params(self, params):
-        t_ind, S = 0, self.setting['sparsity']
+        t_ind, S = 0, self.setting['nfeats']
         a = params[0];t_ind+=1
         b = params[1];t_ind+=1
         l = params[t_ind:t_ind+self.D];t_ind+=self.D
@@ -84,15 +84,14 @@ class SSGP(Model):
     
     def compile_theano_funcs(self, opt_algo, opt_params):
         self.compiled_funcs = {}
-        eps, S = 1e-6, self.setting['sparsity']
-        kl = lambda mu, sig: sig+mu**2-TT.log(sig)
+        eps, S = 1e-6, self.setting['nfeats']
         X, y = TT.dmatrices('X', 'y')
         params = TT.dvector('params')
         a, b, F, P = self.unpack_params(params)
         sig2_n, sig_f = TT.exp(2*a), TT.exp(b)
         FF = TT.dot(X, F)+P
-        Phi = TT.concatenate((TT.cos(FF), TT.sin(FF)), 1)
-        Phi = sig_f*TT.sqrt(2./S)*Phi
+        Phi = TT.exp(-FF)
+        Phi = sig_f*TT.sqrt(1./S)*Phi
         PhiTPhi = TT.dot(Phi.T, Phi)
         A = PhiTPhi+(sig2_n+eps)*TT.identity_like(PhiTPhi)
         L = Tlin.cholesky(A)
@@ -115,8 +114,8 @@ class SSGP(Model):
             givens=[(params, self.params)])
         Xs, Li, alpha = TT.dmatrices('Xs', 'Li', 'alpha')
         FFs = TT.dot(Xs, F)+P
-        Phis = TT.concatenate((TT.cos(FFs), TT.sin(FFs)), 1)
-        Phis = sig_f*TT.sqrt(2./S)*Phis
+        Phis = TT.exp(-FFs)
+        Phis = sig_f*TT.sqrt(1./S)*Phis
         mu_pred = TT.dot(Phis, alpha)
         std_pred = (sig2_n*(1+(TT.dot(Phis, Li.T)**2).sum(1)))**0.5
         pred_inputs = [Xs, alpha, Li]

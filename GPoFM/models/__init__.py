@@ -1,4 +1,4 @@
 from .. import *
 from .GPoFM import *
-from .SSGP import *
-from .SCFGP import *
+from .GPoFF import *
+from .GPoLF import *

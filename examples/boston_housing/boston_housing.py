@@ -15,11 +15,11 @@ from GPoFM import *
 BEST_MODEL_PATH = 'boston.pkl'
 
 ############################ Prior Setting ############################
-use_models = ['SSGP', 'SCFGP']
-reps_per_sparsity = 50
-sparsity_range = [10, 90]
-sparsity_length = sparsity_range[1]-sparsity_range[0]
-sparsity_choices = [sparsity_range[0]+(i*sparsity_length)//8 for i in range(9)]
+use_models = ['GPoFF', 'GPoLF', 'GPoCFF']
+reps_per_nfeats = 20
+nfeats_range = [20, 80]
+nfeats_length = nfeats_range[1]-nfeats_range[0]
+nfeats_choices = [nfeats_range[0]+(i*nfeats_length)//3 for i in range(3)]
 plot_metric = 'mse'
 select_params_metric = 'cost'
 select_model_metric = 'mse'
@@ -86,7 +86,7 @@ def plot_dist(*args):
         sns.distplot(x)
     plt.show()
 
-def load_boston_data(prop=400/506):
+def load_boston_data(prop=0.65):
     from sklearn import datasets
     boston = datasets.load_boston()
     X, y = boston.data, boston.target
@@ -100,14 +100,14 @@ def load_boston_data(prop=400/506):
 
 ############################ Training Phase ############################
 X_train, y_train, X_valid, y_valid = load_boston_data()
-for sparsity in sparsity_choices:
+for nfeats in nfeats_choices:
     for model_name in use_models:
         ModelClass = getattr(sys.modules['GPoFM'], model_name)
         funcs = None
         results = {en:[] for en in evals.keys()}
-        for round in range(reps_per_sparsity):
+        for round in range(reps_per_nfeats):
             X_train, y_train, X_valid, y_valid = load_boston_data()
-            model = GPoFM(ModelClass(sparsity=sparsity))
+            model = GPoFM(ModelClass(nfeats=nfeats))
             if(funcs is None):
                 model.set_data(X_train, y_train)
                 model.optimize(X_valid, y_valid, None, visualizer, **opt_params)
@@ -142,14 +142,14 @@ for en, (metric_name, metric_result) in evals.items():
     ax = f.add_subplot(111)
     maxv, minv = 0, 1e5
     for model_name in metric_result.keys():
-        for i in range(len(sparsity_choices)):
+        for i in range(len(nfeats_choices)):
             maxv = max(maxv, metric_result[model_name][i][0])
             minv = min(minv, metric_result[model_name][i][0])
-            ax.text(sparsity_choices[i], metric_result[model_name][i][0],
+            ax.text(nfeats_choices[i], metric_result[model_name][i][0],
                 '%.2f'%(metric_result[model_name][i][0]), fontsize=5)
-        line = ax.errorbar(sparsity_choices, [metric_result[model_name][i][0]
-            for i in range(len(sparsity_choices))], fmt='-o', label=model_name)
-    ax.set_xlim([min(sparsity_choices)-10, max(sparsity_choices)+10])
+        line = ax.errorbar(nfeats_choices, [metric_result[model_name][i][0]
+            for i in range(len(nfeats_choices))], fmt='-o', label=model_name)
+    ax.set_xlim([min(nfeats_choices)-10, max(nfeats_choices)+10])
     ax.set_ylim([minv-(maxv-minv)*0.15,maxv+(maxv-minv)*0.45])
     plt.title(metric_name, fontsize=18)
     handles, labels = ax.get_legend_handles_labels()
