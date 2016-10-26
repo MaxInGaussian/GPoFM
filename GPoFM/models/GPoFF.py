@@ -31,6 +31,8 @@ class GPoFF(Model):
     ----------
     nfeats : an integer
         Number of Fourier Features
+    penalty : a float
+        Penalty for too complex function. default: 1.
     X_trans : a string
         Transformation method used for inputs of training data
     y_trans : a string
@@ -41,9 +43,10 @@ class GPoFF(Model):
     
     setting, compiled_funcs = None, None
     
-    def __init__(self, nfeats=50, **args):
+    def __init__(self, nfeats=50, penalty=1., **args):
         super(GPoFF, self).__init__(**args)
         self.setting['nfeats'] = nfeats
+        self.setting['penalty'] = penalty
     
     def __str__(self):
         return "GPoFF (Fourier = %d)"%(self.setting['nfeats'])
@@ -86,6 +89,7 @@ class GPoFF(Model):
     def compile_theano_funcs(self, opt_algo, opt_params):
         self.compiled_funcs = {}
         eps, S = 1e-6, self.setting['nfeats']
+        kl = lambda mu, std: TT.mean(std+mu**2-TT.log(std))
         X, y = TT.dmatrices('X', 'y')
         params = TT.dvector('params')
         a, b, F, P = self.unpack_params(params)
@@ -101,9 +105,12 @@ class GPoFF(Model):
         beta = TT.dot(Li, PhiTy)
         alpha = TT.dot(Li.T, beta)
         mu_f = TT.dot(Phi, alpha)
+        mu_w = TT.mean(F, axis=1)
+        sig_w = TT.std(F, axis=1)
         nlml = 2*TT.log(TT.diagonal(L)).sum()+1./sig2_n*(
             (y**2).sum()-(beta**2).sum())+2*(X.shape[0]-S)*a
-        obj = nlml/X.shape[0]
+        penelty = kl(mu_w, sig_w)
+        obj = (nlml+penelty*self.setting['penalty'])/X.shape[0]
         grads = TT.grad(obj, params)
         updates = getattr(Optimizer, opt_algo)(self.params, grads, **opt_params)
         updates = getattr(Optimizer, 'apply_momentum')(updates, momentum=0.9)
@@ -135,7 +142,9 @@ class GPoCFF(Model):
     ncorr : an integer
         Number of correlated Fourier features
     nfeats : an integer
-        Fourier of frequency matrix
+        Number of Fourier features (nfeats > ncorr)
+    penalty : a float
+        Penalty for too complex function. default: 1.
     X_trans : a string
         Transformation method used for inputs of training data
     y_trans : a string
@@ -146,10 +155,11 @@ class GPoCFF(Model):
     
     setting, compiled_funcs = None, None
     
-    def __init__(self, ncorr=10, nfeats=20, **args):
+    def __init__(self, ncorr=10, nfeats=20, penalty=1., **args):
         super(GPoCFF, self).__init__(**args)
         self.setting['ncorr'] = ncorr
         self.setting['nfeats'] = nfeats
+        self.setting['penalty'] = penalty
     
     def __str__(self):
         S, M = self.setting['nfeats'], self.setting['ncorr']
@@ -198,7 +208,7 @@ class GPoCFF(Model):
         self.compiled_funcs = {}
         S, M = self.setting['nfeats'], self.setting['ncorr']
         epsilon = 1e-6
-        kl = lambda mu, sig: sig+mu**2-TT.log(sig)
+        kl = lambda mu, std: TT.mean(std+mu**2-TT.log(std))
         X, y = TT.dmatrices('X', 'y')
         params = TT.dvector('params')
         a, b, c, F, P = self.unpack_params(params)
@@ -216,8 +226,8 @@ class GPoCFF(Model):
         mu_f = TT.dot(Phi, alpha)
         var_f = (TT.dot(Phi, Li.T)**2).sum(1)[:, None]
         dsp = noise*(var_f+1)
-        mu_w = TT.sum(TT.mean(F, axis=1))
-        sig_w = TT.sum(TT.std(F, axis=1))
+        mu_w = TT.mean(F, axis=1)
+        sig_w = TT.std(F, axis=1)
         hermgauss = np.polynomial.hermite.hermgauss(30)
         herm_x = Ts(hermgauss[0])[None, None, :]
         herm_w = Ts(hermgauss[1]/np.sqrt(np.pi))[None, None, :]
@@ -228,7 +238,7 @@ class GPoCFF(Model):
         nlml = 2*TT.log(TT.diagonal(L)).sum()+2*enll.sum()+1./sig2_n*(
             (y**2).sum()-(beta**2).sum())+2*(X.shape[0]-M)*a
         penelty = kl(mu_w, sig_w)
-        obj = (nlml+penelty*1e-2)/X.shape[0]
+        obj = (nlml+penelty*self.setting['penalty'])/X.shape[0]
         grads = TT.grad(obj, params)
         updates = getattr(Optimizer, opt_algo)(self.params, grads, **opt_params)
         updates = getattr(Optimizer, 'apply_momentum')(updates, momentum=0.9)

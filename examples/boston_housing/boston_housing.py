@@ -15,11 +15,12 @@ from GPoFM import *
 BEST_MODEL_PATH = 'boston.pkl'
 
 ############################ Prior Setting ############################
-use_models = ['GPoFF', 'GPoLF', 'GPoCFF']
+use_models = ['GPoFF', 'GPoLF', 'GPoCFF', 'GPoCLF']
 reps_per_nfeats = 20
-nfeats_range = [20, 80]
+penalty = 1e-1
+nfeats_range = [10, 90]
 nfeats_length = nfeats_range[1]-nfeats_range[0]
-nfeats_choices = [nfeats_range[0]+(i*nfeats_length)//3 for i in range(3)]
+nfeats_choices = [nfeats_range[0]+(i*nfeats_length)//8 for i in range(8)]
 plot_metric = 'mse'
 select_params_metric = 'cost'
 select_model_metric = 'mse'
@@ -107,7 +108,7 @@ for nfeats in nfeats_choices:
         results = {en:[] for en in evals.keys()}
         for round in range(reps_per_nfeats):
             X_train, y_train, X_valid, y_valid = load_boston_data()
-            model = GPoFM(ModelClass(nfeats=nfeats))
+            model = GPoFM(ModelClass(nfeats=nfeats, penalty=penalty))
             if(funcs is None):
                 model.set_data(X_train, y_train)
                 model.optimize(X_valid, y_valid, None, visualizer, **opt_params)
@@ -154,6 +155,6 @@ for en, (metric_name, metric_result) in evals.items():
     plt.title(metric_name, fontsize=18)
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles, labels, loc='upper right', ncol=1, fancybox=True)
-    plt.xlabel('Sparsity', fontsize=13)
+    plt.xlabel('Number of Features', fontsize=13)
     plt.ylabel(en, fontsize=13)
     plt.savefig('plots/'+en.lower()+'.png')
