@@ -1,17 +1,33 @@
 #GPoFM
 
-GPoFM is a machine learning toolkit designed for predictive modeling of complex-
-strutured data. The key of success is to find a tailormade function that maps
-the inputs to the targets. In this sense, linear functions undoubtedly would be
-too simple to solve the problem. Nevertheless, non-linear functions with much
-flexibility are mostly concerned. In fact, there are uncountable ways to define
-an non-linear function, and it's generally hard to tell which class of
+GPoFM is a machine learning toolkit designed for predictive modeling of
+complex-structured data. The key of success is to find a tailormade function
+that maps the inputs to the targets. In this sense, linear functions undoubtedly
+would be too simple to solve the problem. Nevertheless, non-linear functions
+with much flexibility are mostly concerned. In fact, there are uncountable ways
+to define an non-linear function, and it's generally hard to tell which class of
 mathematical functions specifically works for a problem. A machine-learning kind
 of approach is to approximate such a function by 'supervising' data and
 'learning' patterns. In statistical community, this is traditionally coined
-'regression'. Although such a data-driven function can be obtained through 
-optimization, a great drawback of  is the loss of generality. To overcome this, 
-proposed improvement of [Sparse Spectrum Gaussian Process](http://quinonero.net/Publications/lazaro-gredilla10a.pdf) (SSGP), which is a new branch of method to speed up Gaussian process model taking advantage of [Fourier features](https://papers.nips.cc/paper/3182-random-features-for-large-scale-kernel-machines.pdf). Recall that using Gaussian processes for machine learning is a state-of-the-art technique that originate from and popularize by [Carl Edward Rasmussen and Christopher K. I. Williams](http://www.gaussianprocess.org/gpml/).
+'regression'. Although such a data-driven function can be obtained through
+optimization, the optimized models tend to lose generality, which is technically
+regarded as 'overfitting'.
+
+To prevent from overfitting, one feasible approach is to carry out Bayesian
+inference over the distribution of non-linear functions. That is, the desired
+function is assumed to be 'produced' from a particular space. Due to
+mathematical brevity and elegance, Gaussian process is mainly employed to
+describe the distribution over functions. [Carl Edward Rasmussen and Christopher
+K. I. Williams](http://www.gaussianprocess.org/gpml/), who pioneer and
+popularize the idea of using Gaussian processes for machine learning tasks,
+emphasize that one of the greatest advantages of Gaussian process is that we can
+integrate all possible functions over the function distribution (Gaussian
+process), and obtain an analytical solution because of nice properties of
+Gaussian. It is pinpointed that this Bayesian routine is prefered over
+optimization on a certain estimate of function.
+
+In GPoFM, the 
+proposed improvement of [Sparse Spectrum Gaussian Process](http://quinonero.net/Publications/lazaro-gredilla10a.pdf) (SSGP), which is a new branch of method to speed up Gaussian process model taking advantage of [Fourier features](https://papers.nips.cc/paper/3182-random-features-for-large-scale-kernel-machines.pdf). Recall that using 
 
 Based on minimization of the marginal likelihood, SCFGP selects a set of vectors to obtain a [Gramian matrix](https://en.wikipedia.org/wiki/Gramian_matrix), which is treated as the frequency matrix for later computation of Fourier features. This procedure indeed can be viewed as constructing sparsely correlated Fourier features. 
 
@@ -21,7 +37,8 @@ The formulation of SCFGP is briefly described in this sheet: (Derivation will be
 
 ![SCFGP Formulas](SCFGP_formulas.png?raw=true "SCFGP Formulas")
 
-SCFGP is implemented in python using Theano and originally designed by Max W. Y. Lam (maxingaussian@gmail.com).
+GPoFM is developed in python using Theano and originally designed by
+Max W. Y. Lam (maxingaussian@gmail.com).
 
 ###Highlights of SCFGP
 
