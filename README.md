@@ -1,10 +1,21 @@
-#SCFGP
+#GPoFM
 
-SCFGP is a proposed improvement of [Sparse Spectrum Gaussian Process](http://quinonero.net/Publications/lazaro-gredilla10a.pdf) (SPGP), which is a new branch of method to speed up Gaussian process model taking advantage of [Fourier features](https://papers.nips.cc/paper/3182-random-features-for-large-scale-kernel-machines.pdf). Recall that using Gaussian processes for machine learning is a state-of-the-art technique that originate from and popularize by [Carl Edward Rasmussen and Christopher K. I. Williams](http://www.gaussianprocess.org/gpml/).
+GPoFM is a machine learning toolkit designed for predictive modeling of complex-
+strutured data. The key of success is to find a tailormade function that maps
+the inputs to the targets. In this sense, linear functions undoubtedly would be
+too simple to solve the problem. Nevertheless, non-linear functions with much
+flexibility are mostly concerned. In fact, there are uncountable ways to define
+an non-linear function, and it's generally hard to tell which class of
+mathematical functions specifically works for a problem. A machine-learning kind
+of approach is to approximate such a function by 'supervising' data and
+'learning' patterns. In statistical community, this is traditionally coined
+'regression'. Although such a data-driven function can be obtained through 
+optimization, a great drawback of  is the loss of generality. To overcome this, 
+proposed improvement of [Sparse Spectrum Gaussian Process](http://quinonero.net/Publications/lazaro-gredilla10a.pdf) (SSGP), which is a new branch of method to speed up Gaussian process model taking advantage of [Fourier features](https://papers.nips.cc/paper/3182-random-features-for-large-scale-kernel-machines.pdf). Recall that using Gaussian processes for machine learning is a state-of-the-art technique that originate from and popularize by [Carl Edward Rasmussen and Christopher K. I. Williams](http://www.gaussianprocess.org/gpml/).
 
 Based on minimization of the marginal likelihood, SCFGP selects a set of vectors to obtain a [Gramian matrix](https://en.wikipedia.org/wiki/Gramian_matrix), which is treated as the frequency matrix for later computation of Fourier features. This procedure indeed can be viewed as constructing sparsely correlated Fourier features. 
 
-Note that the Fourier features are identically and independently distributed in SPGP, therefore the size of optimization parameters is proportional to the number of Fourier features times the number of dimension. This is undoubtedly an unfavorable property, since the model is likely to stick in local minima and becomes very unstable when dealing with very high dimensional data, such as images, speech signals, text, etc.
+Note that the Fourier features are identically and independently distributed in SSGP, therefore the size of optimization parameters is proportional to the number of Fourier features times the number of dimension. This is undoubtedly an unfavorable property, since the model is likely to stick in local minima and becomes very unstable when dealing with very high dimensional data, such as images, speech signals, text, etc.
 
 The formulation of SCFGP is briefly described in this sheet: (Derivation will be included in the future)
 
