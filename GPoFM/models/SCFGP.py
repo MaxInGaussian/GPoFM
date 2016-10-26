@@ -22,15 +22,15 @@ __all__ = [
 class SCFGP(Model):
     
     '''
-    The :class:`SCFGP` class implemented handy functions shared by all machine
-    learning models. It is always called as a subclass for any new model.
+    The :class:`SCFGP` class implemented a GPoFM model:
+        Sparse Correlated Fourier Features based Gaussian Process
     
     Parameters
     ----------
+    cFour : an integer
+        Number of correlated Fourier features
     sparsity : an integer
         Sparsity of frequency matrix
-    nfeats : an integer
-        Number of correlated Fourier features
     X_trans : a string
         Transformation method used for inputs of training data
     y_trans : a string
@@ -41,18 +41,18 @@ class SCFGP(Model):
     
     setting, compiled_funcs = None, None
     
-    def __init__(self, sparsity=20, nfeats=50, **args):
+    def __init__(self, cFour=20, sparsity=20, **args):
         super(SCFGP, self).__init__(**args)
+        self.setting['cFour'] = cFour
         self.setting['sparsity'] = sparsity
-        self.setting['nfeats'] = nfeats
     
     def __str__(self):
-        S, M = self.setting['sparsity'], self.setting['nfeats']
-        return "SCFGP (Sparsity=%d, Fourier Features=%d)"%(S, M)
+        M, S = self.setting['sparsity'], self.setting['cFour']
+        return "SCFGP (Sparsity = %d, Corr. Fourier = %d)"%(M, S)
 
     def init_params(self):
-        S, M = self.setting['sparsity'], self.setting['nfeats']
-        const = npr.rand(3)+1e-2
+        M, S = self.setting['sparsity'], self.setting['cFour']
+        const = np.zeros(3)
         l_f = npr.randn(self.D*S)
         r_f = npr.rand(M*S)
         l_p = 2*np.pi*npr.rand(S)
@@ -60,7 +60,7 @@ class SCFGP(Model):
         self.params = Ts(np.concatenate([const, l_f, r_f, l_p, p]))
     
     def unpack_params(self, params):
-        S, M = self.setting['sparsity'], self.setting['nfeats']
+        M, S = self.setting['sparsity'], self.setting['cFour']
         t_ind = 0
         a = params[0];t_ind+=1
         b = params[1];t_ind+=1
@@ -79,11 +79,12 @@ class SCFGP(Model):
     def unpack_trained_mats(self, trained_mats):
         return {'obj': np.double(trained_mats[0]),
                 'alpha': trained_mats[1],
-                'Li': trained_mats[2],}
+                'Li': trained_mats[2],
+                'mu_f': trained_mats[3],}
     
     def unpack_predicted_mats(self, predicted_mats):
-        return {'mu_f': predicted_mats[0],
-                'std_f': predicted_mats[1],}
+        return {'mu_fs': predicted_mats[0],
+                'std_fs': predicted_mats[1],}
     
     def pack_train_func_inputs(self, X, y):
         return [X, y]
@@ -93,18 +94,17 @@ class SCFGP(Model):
     
     def compile_theano_funcs(self, opt_algo, opt_params):
         self.compiled_funcs = {}
-        S, M = self.setting['sparsity'], self.setting['nfeats']
+        M, S = self.setting['sparsity'], self.setting['cFour']
         epsilon = 1e-6
         kl = lambda mu, sig: sig+mu**2-TT.log(sig)
         X, y = TT.dmatrices('X', 'y')
         params = TT.dvector('params')
         a, b, c, l_F, F, l_P, P = self.unpack_params(params)
-        sig2_n, sig_f = TT.exp(2*a), TT.exp(b)
+        sig2_n, sig_f, noise = TT.exp(2*a), TT.exp(b), TT.exp(c)
         l_FF = TT.dot(X, l_F)+l_P
         FF = TT.concatenate((l_FF, TT.dot(X, F)+P), 1)
         Phi = TT.concatenate((TT.cos(FF), TT.sin(FF)), 1)
-        Phi = sig_f*TT.sqrt(2./M)*Phi
-        noise = TT.log(1+TT.exp(c))
+        Phi = sig_f*TT.sqrt(2./(M+S))*Phi
         PhiTPhi = TT.dot(Phi.T, Phi)
         A = PhiTPhi+(sig2_n+epsilon)*TT.identity_like(PhiTPhi)
         L = Tlin.cholesky(A)
@@ -134,16 +134,16 @@ class SCFGP(Model):
         updates = getattr(Optimizer, opt_algo)(self.params, grads, **opt_params)
         updates = getattr(Optimizer, 'apply_momentum')(updates, momentum=0.9)
         train_inputs = [X, y]
-        train_outputs = [obj, alpha, Li]
-        self.compiled_funcs['train'] = Tf(train_inputs, train_outputs,
-            givens=[(params, self.params)])
+        train_outputs = [obj, alpha, Li, mu_f]
         self.compiled_funcs['opt'] = Tf(train_inputs, train_outputs,
             givens=[(params, self.params)], updates=updates)
+        self.compiled_funcs['train'] = Tf(train_inputs, train_outputs,
+            givens=[(params, self.params)])
         Xs, Li, alpha = TT.dmatrices('Xs', 'Li', 'alpha')
         l_FFs = TT.dot(Xs, l_F)+l_P
         FFs = TT.concatenate((l_FFs, TT.dot(Xs, F)+P), 1)
         Phis = TT.concatenate((TT.cos(FFs), TT.sin(FFs)), 1)
-        Phis = sig_f*TT.sqrt(2./M)*Phis
+        Phis = sig_f*TT.sqrt(2./(M+S))*Phis
         mu_pred = TT.dot(Phis, alpha)
         std_pred = (noise*(1+(TT.dot(Phis, Li.T)**2).sum(1)))**0.5
         pred_inputs = [Xs, alpha, Li]

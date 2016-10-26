@@ -56,7 +56,7 @@ class Model(object):
         Idicator that determines whether printing training message or not
     '''
 
-    ID, verbose, evals_ind, M, N, D = '', False, -1, -1, -1, -1
+    setting, verbose, evals_ind, M, N, D = {'id':''}, False, -1, -1, -1, -1
     X, y, X_Trans, y_Trans, params, compiled_funcs, trained_mats = [None]*7
     
     def __init__(self, **args):
@@ -148,8 +148,8 @@ class Model(object):
             self.trained_mats = self.unpack_trained_mats(trained_mats)
 
     def optimize(self, Xv=None, yv=None, funcs=None, visualizer=None, **args):
-        obj = 'obj' if 'obj' not in args.keys() else args['obj'].lower()
-        obj = 'obj' if obj not in self.evals.keys() else obj
+        obj_type = 'obj' if 'obj' not in args.keys() else args['obj'].lower()
+        obj_type = 'obj' if obj_type not in self.evals.keys() else obj_type
         opt_algo = {'algo': None} if 'algo' not in args.keys() else args['algo']
         nbatches = 1 if 'nbatches' not in args.keys() else args['nbatches']
         batchsize = 150 if 'batchsize' not in args.keys() else args['batchsize']
@@ -178,7 +178,7 @@ class Model(object):
             visualizer.model = self
             animate = visualizer.train_with_plot()
         if(Xv is None or yv is None):
-            obj = 'obj'
+            obj_type = 'obj'
             self.evals['mae'][1].append(np.Infinity)
             self.evals['nmae'][1].append(np.Infinity)
             self.evals['mse'][1].append(np.Infinity)
@@ -215,7 +215,7 @@ class Model(object):
             if(visualizer is not None):
                 animate(iter)
                 plt.pause(0.05)
-            obj_val = self.evals[obj][1][-1]
+            obj_val = self.evals[obj_type][1][-1]
             if(obj_val < min_obj_val):
                 if(min_obj_val-obj_val < cvrg_tol):
                     cvrg_iter += 1
@@ -253,21 +253,29 @@ class Model(object):
         pred_inputs = self.pack_pred_func_inputs(self.Xs)
         predicted_mats = self.compiled_funcs['pred'](*pred_inputs)
         self.predicted_mats = self.unpack_predicted_mats(predicted_mats)
-        mu_f, std_f = self.predicted_mats['mu_f'], self.predicted_mats['std_f']
-        mu_y = self.trans['y'].recover(mu_f)
-        up_bnd_y = self.trans['y'].recover(mu_f+std_f[:, None])
-        dn_bnd_y = self.trans['y'].recover(mu_f-std_f[:, None])
-        std_y = 0.5*(up_bnd_y-dn_bnd_y)
+        mu_fs = self.predicted_mats['mu_fs']
+        std_fs = self.predicted_mats['std_fs']
+        mu_ys = self.trans['y'].recover(mu_fs)
+        up_bnd_ys = self.trans['y'].recover(mu_fs+std_fs[:, None])
+        dn_bnd_ys = self.trans['y'].recover(mu_fs-std_fs[:, None])
+        std_ys = 0.5*(up_bnd_ys-dn_bnd_ys)
         if(ys is not None):
-            self.evals['mae'][1].append(np.mean(np.abs(mu_y-ys)))
-            self.evals['nmae'][1].append(self.evals['mae'][1][-1]/np.std(ys))
-            self.evals['mse'][1].append(np.mean((mu_y-ys)**2.))
-            self.evals['nmse'][1].append(self.evals['mse'][1][-1]/np.var(ys))
-            self.evals['mnlp'][1].append(0.5*np.mean(((
-                ys-mu_y)/std_y)**2+np.log(2*np.pi*std_y**2)))
-            self.evals['score'][1].append(self.evals['nmse'][1][-1]/(
-                1+np.exp(-self.evals['mnlp'][1][-1])))
-        return mu_y, std_y
+            y = self.trans['y'].recover(self.y)
+            mu_y = self.trans['y'].recover(self.trained_mats['mu_f'])
+            diff_y = np.concatenate([mu_ys-ys, mu_y-y])
+            mae = np.mean(np.abs(diff_y))
+            self.evals['mae'][1].append(mae)
+            nmae = mae/np.std(ys)
+            self.evals['nmae'][1].append(nmae)
+            mse = np.mean(diff_y**2.)
+            self.evals['mse'][1].append(mse)
+            nmse = mse/np.var(ys)
+            self.evals['nmse'][1].append(nmse)
+            mnlp = 0.5*np.mean(((ys-mu_ys)/std_ys)**2+np.log(2*np.pi*std_ys**2))
+            self.evals['mnlp'][1].append(mnlp)
+            score = nmse/(1+np.exp(-mnlp))
+            self.evals['score'][1].append(score)
+        return mu_ys, std_ys
 
     def get_vars_for_prediction(self):
         return ['setting',
@@ -275,7 +283,8 @@ class Model(object):
                 'params',
                 'trained_mats',
                 'compiled_funcs',
-                'evals']
+                'evals',
+                'y']
 
     def save(self, path):
         import pickle
@@ -313,7 +322,7 @@ class Model(object):
             float_len1 = float_len-1 if eval1 < 0 else float_len
             float_len2 = float_len-1 if eval2 < 0 else float_len
             aligned = ('%6s = %.'+str(float_len1)+'e <> '+'%.'+str(
-                float_len2+len(model_name)%2)+'e')%(metric, eval1, eval2)
+                float_len2-len(model_name)%2)+'e')%(metric, eval1, eval2)
             self.echo(model_name, aligned)
         self.verbose = verbose
 
