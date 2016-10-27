@@ -180,8 +180,6 @@ class Model(object):
         obj_type = 'obj' if 'obj' not in args.keys() else args['obj'].lower()
         obj_type = 'obj' if obj_type not in self.evals.keys() else obj_type
         opt_algo = {'algo': None} if 'algo' not in args.keys() else args['algo']
-        nbatches = 1 if 'nbatches' not in args.keys() else args['nbatches']
-        batchsize = 150 if 'batchsize' not in args.keys() else args['batchsize']
         cvrg_tol = 1e-4 if 'cvrg_tol' not in args.keys() else args['cvrg_tol']
         max_cvrg = 18 if 'max_cvrg' not in args.keys() else args['max_cvrg']
         max_iter = 500 if 'max_iter' not in args.keys() else args['max_iter']
