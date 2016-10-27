@@ -16,21 +16,21 @@ from . import Model
 from .. import Optimizer
 
 __all__ = [
-    "GPoLF",
-    "GPoCLF",
+    "GPoHF",
+    "GPoCHF",
 ]
 
 
-class GPoLF(Model):
+class GPoHF(Model):
     
     '''
-    The :class:`GPoLF` class implemented a GPoFM model:
-        Gaussian process Optimizing Laplace Features (GPoLF)
+    The :class:`GPoHF` class implemented a GPoFM model:
+        Gaussian process Optimizing Homogeneous Features (GPoHF)
     
     Parameters
     ----------
     nfeats : an integer
-        Number of Laplace Features
+        Number of Homogeneous Features
     penalty : a float
         Penalty for too complex function. default: 1.
     X_trans : a string
@@ -44,31 +44,34 @@ class GPoLF(Model):
     setting, compiled_funcs = None, None
     
     def __init__(self, nfeats=50, penalty=1., **args):
-        super(GPoLF, self).__init__(**args)
+        super(GPoHF, self).__init__(**args)
         self.setting['nfeats'] = nfeats
         self.setting['penalty'] = penalty
     
     def __str__(self):
-        return "GPoLF (Laplace = %d)"%(self.setting['nfeats'])
+        return "GPoHF (Homogeneous = %d)"%(self.setting['nfeats'])
 
     def init_params(self):
         S = self.setting['nfeats']
         const = np.zeros(2)
         l = npr.randn(self.D)
+        g = npr.randn(self.D*S)
         f = npr.randn(self.D*S)
         p = 2*np.pi*npr.rand(S)
-        self.params = Ts(np.concatenate([const, l, f, p]))
+        self.params = Ts(np.concatenate([const, l, g, f, p]))
     
     def unpack_params(self, params):
         t_ind, S = 0, self.setting['nfeats']
         a = params[0];t_ind+=1
         b = params[1];t_ind+=1
         l = params[t_ind:t_ind+self.D];t_ind+=self.D
+        g = params[t_ind:t_ind+self.D*S];t_ind+=self.D*S
+        G = TT.reshape(g, (self.D, S))/np.exp(l[:, None])
         f = params[t_ind:t_ind+self.D*S];t_ind+=self.D*S
         F = TT.reshape(f, (self.D, S))/np.exp(l[:, None])
         p = params[t_ind:t_ind+S];t_ind+=S
         P = TT.reshape(p, (1, S))-TT.mean(F, 0)[None, :]
-        return a, b, F, P
+        return a, b, G, F, P
     
     def unpack_trained_mats(self, trained_mats):
         return {'obj': np.double(trained_mats[0]),
@@ -92,10 +95,10 @@ class GPoLF(Model):
         kl = lambda mu, std: TT.mean(std+mu**2-TT.log(std))
         X, y = TT.dmatrices('X', 'y')
         params = TT.dvector('params')
-        a, b, F, P = self.unpack_params(params)
+        a, b, G, F, P = self.unpack_params(params)
         sig2_n, sig_f = TT.exp(2*a), TT.exp(b)
         FF = TT.dot(X, F)+P
-        Phi = TT.exp(-FF)
+        Phi = TT.cos(FF)*TT.exp(X.dot(G))
         Phi = sig_f*TT.sqrt(1./S)*Phi
         PhiTPhi = TT.dot(Phi.T, Phi)
         A = PhiTPhi+(sig2_n+eps)*TT.identity_like(PhiTPhi)
@@ -122,7 +125,7 @@ class GPoLF(Model):
             givens=[(params, self.params)])
         Xs, Li, alpha = TT.dmatrices('Xs', 'Li', 'alpha')
         FFs = TT.dot(Xs, F)+P
-        Phis = TT.exp(-FFs)
+        Phis = TT.cos(FFs)*TT.exp(Xs.dot(G))
         Phis = sig_f*TT.sqrt(1./S)*Phis
         mu_pred = TT.dot(Phis, alpha)
         std_pred = (sig2_n*(1+(TT.dot(Phis, Li.T)**2).sum(1)))**0.5
@@ -131,18 +134,18 @@ class GPoLF(Model):
         self.compiled_funcs['pred'] = Tf(pred_inputs, pred_outputs,
             givens=[(params, self.params)])
 
-class GPoCLF(GPoLF):
+class GPoCHF(GPoHF):
     
     '''
-    The :class:`GPoCLF` class implemented a GPoFM model:
-        Gaussian process Optimizing Correlated Laplace Features (GPoCLF)
+    The :class:`GPoCHF` class implemented a GPoFM model:
+        Gaussian process Optimizing Correlated Homogeneous Features (GPoCHF)
     
     Parameters
     ----------
     ncorr : an integer
-        Number of correlated Laplace features
+        Number of correlated Homogeneous features
     nfeats : an integer
-        Number of Laplace Features (nfeats > ncorr)
+        Number of Homogeneous Features (nfeats > ncorr)
     penalty : a float
         Penalty for too complex function. default: 1.
     X_trans : a string
@@ -156,12 +159,12 @@ class GPoCLF(GPoLF):
     setting, compiled_funcs = None, None
     
     def __init__(self, ncorr=10, **args):
-        super(GPoCLF, self).__init__(**args)
+        super(GPoCHF, self).__init__(**args)
         self.setting['ncorr'] = ncorr
     
     def __str__(self):
         S, M = self.setting['nfeats'], self.setting['ncorr']
-        return "GPoCLF (Laplace = %d, Corr. Laplace = %d)"%(S, M)
+        return "GPoCHF (Homogeneous = %d, Corr. Homogeneous = %d)"%(S, M)
 
     def init_params(self):
         S, M = self.setting['nfeats'], self.setting['ncorr']

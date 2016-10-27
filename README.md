@@ -77,7 +77,7 @@ To install Theano, see this page:
 
    http://deeplearning.net/software/theano/install.html
 
-### scikit-learn (only used in the experiments)
+### scikit-learn (only used in the examples)
     
 To install scikit-learn, see this page:
 
@@ -99,12 +99,12 @@ predict_mean, predict_std = model.predict(X_test, {y_test})
 ```python
 model.fit(X_train, y_train, X_test, y_test, plot_training=True)
 ```
-![PlotTraining](experiments/plot_training.gif?raw=true "Plot Training")
+![PlotTraining](examples/plot_training.gif?raw=true "Plot Training")
 ## Training on One-dimensional Inputs (Mauna Loa Atmospheric CO2)
 ```python
 model.fit(X_train, y_train, X_test, y_test, plot_1d_function=True)
 ```
-![Plot1DFunction](experiments/plot_1d_function.gif?raw=true "Plot 1D Function")
+![Plot1DFunction](examples/plot_1d_function.gif?raw=true "Plot 1D Function")
 
 # Performance of SCFGP on Benchmark Datasets
 | Benchmark Dataset | Number of Attributes | Size of Training Data | Size of Testing Data |
@@ -125,7 +125,7 @@ model.fit(X_train, y_train, X_test, y_test, plot_1d_function=True)
 P.S. SCFGP's performance refers to this model:
 ```python
 boston_housing_best_model = SCFGP()
-boston_housing_best_model.load("experiments/boston_housing/best_model.pkl")
+boston_housing_best_model.load("examples/boston_housing/best_model.pkl")
 ```
 
 ## Predict Age of Abalone
@@ -137,7 +137,7 @@ boston_housing_best_model.load("experiments/boston_housing/best_model.pkl")
 P.S. SCFGP's performance refers to this model:
 ```python
 abalone_best_model = SCFGP()
-abalone_best_model.load("experiments/abalone/best_model.pkl")
+abalone_best_model.load("examples/abalone/best_model.pkl")
 ```
 
 ## Predict Kinematics of 8-link Robot Arm
@@ -149,37 +149,37 @@ abalone_best_model.load("experiments/abalone/best_model.pkl")
 P.S. SCFGP's performance refers to this model:
 ```python
 kin8nm_best_model = SCFGP()
-kin8nm_best_model.load("experiments/kin8nm/best_model.pkl")
+kin8nm_best_model.load("examples/kin8nm/best_model.pkl")
 ```
 
 # Performance of SCFGP v.s. Number of Fourier features
 <h2 align="center">
 Bostion Housing
 </h2>
-![BostonHousingMAE](experiments/boston_housing/plots/mae.png?raw=true "Boston Housing MAE")
-![BostonHousingMSE](experiments/boston_housing/plots/mse.png?raw=true "Boston Housing MSE")
-![BostonHousingRMSE](experiments/boston_housing/plots/rmse.png?raw=true "Boston Housing RMAE")
-![BostonHousingNMSE](experiments/boston_housing/plots/nmse.png?raw=true "Boston Housing NMSE")
-![BostonHousingMNLP](experiments/boston_housing/plots/mnlp.png?raw=true "Boston Housing MNLP")
-![BostonHousingTime](experiments/boston_housing/plots/time(s).png?raw=true "Boston Housing Time")
+![BostonHousingMAE](examples/boston_housing/plots/mae.png?raw=true "Boston Housing MAE")
+![BostonHousingMSE](examples/boston_housing/plots/mse.png?raw=true "Boston Housing MSE")
+![BostonHousingRMSE](examples/boston_housing/plots/rmse.png?raw=true "Boston Housing RMAE")
+![BostonHousingNMSE](examples/boston_housing/plots/nmse.png?raw=true "Boston Housing NMSE")
+![BostonHousingMNLP](examples/boston_housing/plots/mnlp.png?raw=true "Boston Housing MNLP")
+![BostonHousingTime](examples/boston_housing/plots/time(s).png?raw=true "Boston Housing Time")
 <h2 align="center">
 Abalone
 </h2>
-![AbaloneMAE](experiments/abalone/plots/mae.png?raw=true "Abalone MAE")
-![AbaloneMSE](experiments/abalone/plots/mse.png?raw=true "Abalone MSE")
-![AbaloneRMSE](experiments/abalone/plots/rmse.png?raw=true "Abalone RMAE")
-![AbaloneNMSE](experiments/abalone/plots/nmse.png?raw=true "Abalone NMSE")
-![AbaloneMNLP](experiments/abalone/plots/mnlp.png?raw=true "Abalone MNLP")
-![AbaloneTime](experiments/abalone/plots/time(s).png?raw=true "Abalone Time")
+![AbaloneMAE](examples/abalone/plots/mae.png?raw=true "Abalone MAE")
+![AbaloneMSE](examples/abalone/plots/mse.png?raw=true "Abalone MSE")
+![AbaloneRMSE](examples/abalone/plots/rmse.png?raw=true "Abalone RMAE")
+![AbaloneNMSE](examples/abalone/plots/nmse.png?raw=true "Abalone NMSE")
+![AbaloneMNLP](examples/abalone/plots/mnlp.png?raw=true "Abalone MNLP")
+![AbaloneTime](examples/abalone/plots/time(s).png?raw=true "Abalone Time")
 <h2 align="center">
 Kin8nm
 </h2>
-![Kin8nmMAE](experiments/kin8nm/plots/mae.png?raw=true "Kin8nm MAE")
-![Kin8nmMSE](experiments/kin8nm/plots/mse.png?raw=true "Kin8nm MSE")
-![Kin8nmRMSE](experiments/kin8nm/plots/rmse.png?raw=true "Kin8nm RMAE")
-![Kin8nmNMSE](experiments/kin8nm/plots/nmse.png?raw=true "Kin8nm NMSE")
-![Kin8nmMNLP](experiments/kin8nm/plots/mnlp.png?raw=true "Kin8nm MNLP")
-![Kin8nmTime](experiments/kin8nm/plots/time(s).png?raw=true "Kin8nm Time")
+![Kin8nmMAE](examples/kin8nm/plots/mae.png?raw=true "Kin8nm MAE")
+![Kin8nmMSE](examples/kin8nm/plots/mse.png?raw=true "Kin8nm MSE")
+![Kin8nmRMSE](examples/kin8nm/plots/rmse.png?raw=true "Kin8nm RMAE")
+![Kin8nmNMSE](examples/kin8nm/plots/nmse.png?raw=true "Kin8nm NMSE")
+![Kin8nmMNLP](examples/kin8nm/plots/mnlp.png?raw=true "Kin8nm MNLP")
+![Kin8nmTime](examples/kin8nm/plots/time(s).png?raw=true "Kin8nm Time")
 <h3 align="center">
 Training time of SCFGP is not quite sensitive to the size of training data.<br>
 On the contrary, it is to a large extent dependent on the number of Fourier features.

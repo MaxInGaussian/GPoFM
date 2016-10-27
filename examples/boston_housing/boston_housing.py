@@ -15,10 +15,10 @@ from GPoFM import *
 BEST_MODEL_PATH = 'boston.pkl'
 
 ############################ Prior Setting ############################
-use_models = ['GPoFF', 'GPoLF', 'GPoCFF', 'GPoCLF']
-reps_per_nfeats = 20
+use_models = ['GPoFF', 'GPoLF', 'GPoHF']
+reps_per_nfeats = 50
 penalty = 1e-1
-nfeats_range = [10, 90]
+nfeats_range = [20, 100]
 nfeats_length = nfeats_range[1]-nfeats_range[0]
 nfeats_choices = [nfeats_range[0]+(i*nfeats_length)//8 for i in range(8)]
 plot_metric = 'mse'
@@ -131,7 +131,7 @@ for nfeats in nfeats_choices:
             for res in evals.keys():
                 results[res].append(model.evals[res][1][-1])
         for en in evals.keys():
-            eval = (np.mean(results[en]), np.std(results[en]))
+            eval = (np.median(results[en]), np.std(results[en]))
             evals[en][1][model_name].append(eval)
 
 ############################ Plot Performances ############################
