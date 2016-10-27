@@ -12,18 +12,18 @@ import matplotlib.pyplot as plt
 
 from GPoFM import *
 
-BEST_MODEL_PATH = 'boston.pkl'
+BEST_MODEL_PATH = 'kin8nm.pkl'
 
 ############################ Prior Setting ############################
-use_models = ['GPoFF', 'GPoCFF', 'GPoLF', 'GPoCLF', 'GPoHF', 'GPoCHF']
-reps_per_nfeats = 30
+use_models = ['GPoFF', 'GPoLF', 'GPoHF']
+reps_per_nfeats = 50
 penalty = 1e-1
-nfeats_range = [10, 90]
+nfeats_range = [20, 100]
 nfeats_length = nfeats_range[1]-nfeats_range[0]
 nfeats_choices = [nfeats_range[0]+(i*nfeats_length)//8 for i in range(8)]
 plot_metric = 'mse'
 select_params_metric = 'cost'
-select_model_metric = 'mse'
+select_model_metric = 'score'
 visualizer = None
 # fig = plt.figure(figsize=(8, 6), facecolor='white')
 # visualizer = Visualizer(fig, plot_metric)
@@ -89,13 +89,13 @@ def plot_dist(*args):
 
 def load_data(proportion=3192./8192):
     from sklearn import datasets
-    from sklearn import cross_testation
+    from sklearn import cross_validation
     kin8nm = datasets.fetch_mldata('regression-datasets kin8nm')
     X, y = kin8nm.data[:, :-1], kin8nm.data[:, -1]
     y = y[:, None]
     X = X.astype(np.float64)
     X_train, X_test, y_train, y_test = \
-        cross_testation.train_test_split(X, y, test_size=proportion)
+        cross_validation.train_test_split(X, y, test_size=proportion)
     return X_train, y_train, X_test, y_test
 
 ############################ Training Phase ############################
@@ -117,6 +117,9 @@ for nfeats in nfeats_choices:
                 model.save(BEST_MODEL_PATH)
             else:
                 best_model = GPoFM(Model().load(BEST_MODEL_PATH))
+                best_model.set_training_data(X_train, y_train)
+                best_model.evaluate(X_test, y_test)
+                model.evaluate(X_test, y_test)
                 best_model._print_evals_comparison(model.evals)
                 if(model.evals[select_model_metric][1][-1] <
                     best_model.evals[select_model_metric][1][-1]):
@@ -129,6 +132,7 @@ for nfeats in nfeats_choices:
         for en in evals.keys():
             eval = (np.median(results[en]), np.std(results[en]))
             evals[en][1][model_name].append(eval)
+
 
 ############################ Plot Performances ############################
 import os

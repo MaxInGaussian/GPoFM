@@ -23,7 +23,7 @@ nfeats_length = nfeats_range[1]-nfeats_range[0]
 nfeats_choices = [nfeats_range[0]+(i*nfeats_length)//8 for i in range(8)]
 plot_metric = 'mse'
 select_params_metric = 'obj'
-select_model_metric = 'mse'
+select_model_metric = 'score'
 visualizer = None
 # fig = plt.figure(figsize=(8, 6), facecolor='white')
 # visualizer = Visualizer(fig, plot_metric)
