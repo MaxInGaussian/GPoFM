@@ -48,11 +48,11 @@ class Visualizer(object):
                                 alpha=((3-er)/5.5)**1.7, facecolor='blue',
                                 linewidth=1e-3)
             ax.plot(Xs[:, 0], mu, alpha=0.8, c='black')
-            ax.errorbar(self.model.X[:, 0],
-                self.model.y.ravel(), fmt='r.', markersize=5, alpha=0.6)
-            yrng = self.model.y.max()-self.model.y.min()
+            ax.errorbar(self.model.Xt[:, 0],
+                self.model.yt.ravel(), fmt='r.', markersize=5, alpha=0.6)
+            yrng = self.model.yt.max()-self.model.yt.min()
             ax.set_ylim([
-                self.model.y.min()-0.5*yrng, self.model.y.max() + 0.5*yrng])
+                self.model.yt.min()-0.5*yrng, self.model.yt.max() + 0.5*yrng])
             ax.set_xlim([-0.1, 1.1])
         return animate
     

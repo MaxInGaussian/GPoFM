@@ -53,7 +53,7 @@ class GPoFF(Model):
 
     def init_params(self):
         S = self.setting['nfeats']
-        const = np.zeros(2)
+        const = npr.randn(2)*1e-2
         l = npr.randn(self.D)
         f = npr.randn(self.D*S)
         p = 2*np.pi*npr.rand(S)
@@ -165,7 +165,7 @@ class GPoCFF(GPoFF):
 
     def init_params(self):
         S, M = self.setting['nfeats'], self.setting['ncorr']
-        const = np.zeros(2)
+        const = npr.randn(2)*1e-2
         l = npr.randn(self.D)
         l_f = npr.randn(self.D*M)
         r_f = npr.rand(M*S)

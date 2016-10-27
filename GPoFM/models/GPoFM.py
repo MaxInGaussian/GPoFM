@@ -121,13 +121,15 @@ class Model(object):
         assert len(X) == len(y)
         if(shuffle):
             inds = np.arange(len(X))
-            np.random.shuffle(inds)
+            npr.shuffle(inds)
+        batches = []
         for start_ind in range(0, len(X)-batchsize+1, batchsize):
             if shuffle:
                 batch = inds[start_ind:start_ind+batchsize]
             else:
                 batch = slice(start_ind, start_ind+batchsize)
-            yield X[batch], y[batch]
+            batches.append((X[batch], y[batch]))
+        return batches
 
     def set_data(self, X, y):
         '''
@@ -135,10 +137,11 @@ class Model(object):
         Y: Normally Distributed Outputs
         '''
         self.echo('-'*80, '\nTransforming training data...')
-        self.X = self.trans['X'].fit_transform(X)
-        self.y = self.trans['y'].fit_transform(y)
+        self.X, self.y = X.copy(), y.copy()
+        self.Xt = self.trans['X'].fit_transform(X)
+        self.yt = self.trans['y'].fit_transform(y)
         self.echo('done.')
-        self.N, self.D = self.X.shape
+        self.N, self.D = self.Xt.shape
         if(self.trained_mats is None):
             self.echo('-'*80, '\nInitializing hyperparameters...')
             self.init_params()
@@ -147,7 +150,34 @@ class Model(object):
             trained_mats = self.compiled_funcs['train'](self.X, self.y)
             self.trained_mats = self.unpack_trained_mats(trained_mats)
 
-    def optimize(self, Xv=None, yv=None, funcs=None, visualizer=None, **args):
+    def cross_validate(self, X, y, nfolds=5):
+        cv_evals_sum = [metric: [] for metric in self.evals.keys()]
+        cv_batches = self.minibatches(X, y, (self.N+1)//nfolds)
+        for i in range(nfolds):
+            Xt, yt = [], []
+            for Xb, yb in cv_batches[:i]+cv_batches[i+1:]:
+                Xt.append(Xb);yt.append(yb)
+            Xt, yt = np.vstack(Xt), np.vstack(yt)
+            Xv, yv = cv_batches[i]
+            self.set_data(Xt, yt)
+            mu, std = self.predict(Xv)
+            mae = np.mean(np.abs(mu-yv))
+            cv_evals_sum['mae'].append(mae)
+            nmae = mae/np.std(ys)
+            cv_evals_sum['nmae'].append(nmae)
+            mse = np.mean((mu-yv)**2.)
+            cv_evals_sum['mse'].append(mse)
+            nmse = mse/np.var(ys)
+            cv_evals_sum['nmse'].append(nmse)
+            mnlp = 0.5*np.mean(((ys-mu)/std)**2+np.log(2*np.pi*std**2))
+            cv_evals_sum['mnlp'].append(mnlp)
+            score = nmse/(1+np.exp(-mnlp))
+            cv_evals_sum['score'].append(score)
+        for metric in self.evals.keys():
+            self.evals[metric][1].append(np.mean(cv_evals_sum[metric]))
+        self.set_data(X, y)
+
+    def train(self, funcs=None, visualizer=None, **args):
         obj_type = 'obj' if 'obj' not in args.keys() else args['obj'].lower()
         obj_type = 'obj' if obj_type not in self.evals.keys() else obj_type
         opt_algo = {'algo': None} if 'algo' not in args.keys() else args['algo']
@@ -177,38 +207,17 @@ class Model(object):
         if(visualizer is not None):
             visualizer.model = self
             animate = visualizer.train_with_plot()
-        if(Xv is None or yv is None):
-            obj_type = 'obj'
-            self.evals['mae'][1].append(np.Infinity)
-            self.evals['nmae'][1].append(np.Infinity)
-            self.evals['mse'][1].append(np.Infinity)
-            self.evals['nmse'][1].append(np.Infinity)
-            self.evals['mnlp'][1].append(np.Infinity)
-            self.evals['score'][1].append(np.Infinity)
         self.evals_ind = 0
         train_start_time = time.time()
-        min_obj_val, argmin_params, cvrg_iter = np.Infinity, self.params, 0
+        min_obj, min_obj_val = np.Infinity, np.Infinity
+        argmin_params, cvrg_iter = self.params, 0
         for iter in range(max_iter):
-            if(nbatches > 1):
-                obj_sum, params_list, batch_count = 0, [], 0
-                for X, y in self.minibatches(self.X, self.y, batchsize):
-                    params_list.append(self.params.get_value())
-                    train_inputs = self.pack_train_func_inputs(self.X, self.y)
-                    trained_mats = self.compiled_funcs['opt'](*train_inputs)
-                    self.trained_mats = self.unpack_trained_mats(trained_mats)
-                    obj_sum += self.trained_mats['obj'];batch_count += 1
-                    if(batch_count == nbatches):
-                        break
-                self.params = Ts(np.median(np.array(params_list), axis=0))
-                self.evals['obj'][1].append(np.double(obj_sum/batch_count))
-            else:
-                train_inputs = self.pack_train_func_inputs(self.X, self.y)
-                trained_mats = self.compiled_funcs['opt'](*train_inputs)
-                self.trained_mats = self.unpack_trained_mats(trained_mats)
-                self.evals['obj'][1].append(self.trained_mats['obj'])
+            train_inputs = self.pack_train_func_inputs(self.Xt, self.yt)
+            trained_mats = self.compiled_funcs['opt'](*train_inputs)
+            self.trained_mats = self.unpack_trained_mats(trained_mats)
+            self.evals['obj'][1].append(self.trained_mats['obj'])
             self.evals['time'][1].append(time.time()-train_start_time)
-            if(Xv is not None and yv is not None):
-                self.predict(Xv, yv)
+            self.cross_validate(self.X, self.y)
             if(iter%(max_iter//10) == 1):
                 self.echo('-'*26, 'VALIDATION ITERATION', iter, '-'*27)
                 self._print_current_evals()
@@ -221,6 +230,7 @@ class Model(object):
                     cvrg_iter += 1
                 else:
                     cvrg_iter = 0
+                min_obj = self.evals['obj'][1][-1]
                 min_obj_val = obj_val
                 self.evals_ind = len(self.evals['obj'][1])-1
                 argmin_params = self.params.copy()
@@ -232,15 +242,9 @@ class Model(object):
                 randp = np.random.rand()*cvrg_iter/max_cvrg*0.5
                 self.params = (1-randp)*self.params+randp*argmin_params
         self.params = argmin_params.copy()
-        train_inputs = self.pack_train_func_inputs(self.X, self.y)
-        trained_mats = self.compiled_funcs['train'](*train_inputs)
-        self.trained_mats = self.unpack_trained_mats(trained_mats)
-        self.evals['obj'][1].append(self.trained_mats['obj'])
+        self.evals['obj'][1].append(min_obj)
         self.evals['time'][1].append(time.time()-train_start_time)
-        if(Xv is not None and yv is not None):
-            self.predict(Xv, yv)
-        for metric in self.evals.keys():
-            self.evals[metric][1] = [self.evals[metric][1][-1]]
+        self.cross_validate(self.X, self.y)
         self.evals_ind = -1
         verbose = self.verbose
         self.verbose = True
@@ -248,7 +252,7 @@ class Model(object):
         self._print_current_evals()
         self.verbose = verbose
 
-    def predict(self, Xs, ys=None):
+    def predict(self, Xs):
         self.Xs = self.trans['X'].transform(Xs)
         pred_inputs = self.pack_pred_func_inputs(self.Xs)
         predicted_mats = self.compiled_funcs['pred'](*pred_inputs)
@@ -259,22 +263,6 @@ class Model(object):
         up_bnd_ys = self.trans['y'].recover(mu_fs+std_fs[:, None])
         dn_bnd_ys = self.trans['y'].recover(mu_fs-std_fs[:, None])
         std_ys = 0.5*(up_bnd_ys-dn_bnd_ys)
-        if(ys is not None):
-            y = self.trans['y'].recover(self.y)
-            mu_y = self.trans['y'].recover(self.trained_mats['mu_f'])
-            diff_y = np.concatenate([mu_ys-ys, mu_y-y])
-            mae = np.mean(np.abs(diff_y))
-            self.evals['mae'][1].append(mae)
-            nmae = mae/np.std(ys)
-            self.evals['nmae'][1].append(nmae)
-            mse = np.mean(diff_y**2.)
-            self.evals['mse'][1].append(mse)
-            nmse = mse/np.var(ys)
-            self.evals['nmse'][1].append(nmse)
-            mnlp = 0.5*np.mean(((ys-mu_ys)/std_ys)**2+np.log(2*np.pi*std_ys**2))
-            self.evals['mnlp'][1].append(mnlp)
-            score = nmse/(1+np.exp(-mnlp))
-            self.evals['score'][1].append(score)
         return mu_ys, std_ys
 
     def get_vars_for_prediction(self):

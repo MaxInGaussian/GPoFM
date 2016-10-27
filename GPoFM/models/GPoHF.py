@@ -53,7 +53,7 @@ class GPoHF(Model):
 
     def init_params(self):
         S = self.setting['nfeats']
-        const = np.zeros(2)
+        const = npr.randn(2)*1e-2
         l = npr.randn(self.D)
         g = npr.randn(self.D*S)
         f = npr.randn(self.D*S)
@@ -168,12 +168,14 @@ class GPoCHF(GPoHF):
 
     def init_params(self):
         S, M = self.setting['nfeats'], self.setting['ncorr']
-        const = np.zeros(2)
+        const = npr.randn(2)*1e-2
         l = npr.randn(self.D)
+        l_g = npr.randn(self.D*M)
+        r_g = npr.randn(M*S)
         l_f = npr.randn(self.D*M)
         r_f = npr.rand(M*S)
         p = 2*np.pi*npr.rand(S)
-        self.params = Ts(np.concatenate([const, l, l_f, r_f, p]))
+        self.params = Ts(np.concatenate([const, l, l_g, r_g, l_f, r_f, p]))
     
     def unpack_params(self, params):
         S, M = self.setting['nfeats'], self.setting['ncorr']
@@ -181,6 +183,11 @@ class GPoCHF(GPoHF):
         a = params[0];t_ind+=1
         b = params[1];t_ind+=1
         l = params[t_ind:t_ind+self.D];t_ind+=self.D
+        l_g = params[t_ind:t_ind+self.D*M];t_ind+=self.D*M
+        l_G = TT.reshape(l_g, (self.D, M))
+        r_g = params[t_ind:t_ind+M*S];t_ind+=M*S
+        r_G = TT.reshape(r_g, (S, M))/M
+        G = l_G.dot(r_G.T)/np.exp(l[:, None])
         l_f = params[t_ind:t_ind+self.D*M];t_ind+=self.D*M
         l_F = TT.reshape(l_f, (self.D, M))
         r_f = params[t_ind:t_ind+M*S];t_ind+=M*S
@@ -188,7 +195,7 @@ class GPoCHF(GPoHF):
         F = l_F.dot(r_F.T)/np.exp(l[:, None])
         p = params[t_ind:t_ind+S];t_ind+=S
         P = TT.reshape(p, (1, S))-TT.mean(F, 0)[None, :]
-        return a, b, F, P
+        return a, b, G, F, P
             
             
             
