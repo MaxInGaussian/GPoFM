@@ -219,7 +219,7 @@ class Optimizer(object):
     
     @staticmethod
     def adadelta(params, grads,
-        learning_rate=0.01,
+        learning_rate=1.,
         rho=0.95,
         epsilon=1e-6,
         **args):

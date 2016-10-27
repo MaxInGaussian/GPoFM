@@ -136,22 +136,20 @@ class Model(object):
         X: Normally Distributed Inputs
         Y: Normally Distributed Outputs
         '''
-        self.echo('-'*80, '\nTransforming training data...')
         self.X, self.y = X.copy(), y.copy()
         self.Xt = self.trans['X'].fit_transform(X)
         self.yt = self.trans['y'].fit_transform(y)
-        self.echo('done.')
         self.N, self.D = self.Xt.shape
         if(self.trained_mats is None):
             self.echo('-'*80, '\nInitializing hyperparameters...')
             self.init_params()
             self.echo('done.')
         else:
-            trained_mats = self.compiled_funcs['train'](self.X, self.y)
+            trained_mats = self.compiled_funcs['train'](self.Xt, self.yt)
             self.trained_mats = self.unpack_trained_mats(trained_mats)
 
     def cross_validate(self, X, y, nfolds=5):
-        cv_evals_sum = [metric: [] for metric in self.evals.keys()]
+        cv_evals_sum = {metric: [] for metric in self.evals.keys()}
         cv_batches = self.minibatches(X, y, (self.N+1)//nfolds)
         for i in range(nfolds):
             Xt, yt = [], []
@@ -163,13 +161,13 @@ class Model(object):
             mu, std = self.predict(Xv)
             mae = np.mean(np.abs(mu-yv))
             cv_evals_sum['mae'].append(mae)
-            nmae = mae/np.std(ys)
+            nmae = mae/np.std(yv)
             cv_evals_sum['nmae'].append(nmae)
             mse = np.mean((mu-yv)**2.)
             cv_evals_sum['mse'].append(mse)
-            nmse = mse/np.var(ys)
+            nmse = mse/np.var(yv)
             cv_evals_sum['nmse'].append(nmse)
-            mnlp = 0.5*np.mean(((ys-mu)/std)**2+np.log(2*np.pi*std**2))
+            mnlp = 0.5*np.mean(((yv-mu)/std)**2+np.log(2*np.pi*std**2))
             cv_evals_sum['mnlp'].append(mnlp)
             score = nmse/(1+np.exp(-mnlp))
             cv_evals_sum['score'].append(score)
@@ -177,7 +175,8 @@ class Model(object):
             self.evals[metric][1].append(np.mean(cv_evals_sum[metric]))
         self.set_data(X, y)
 
-    def train(self, funcs=None, visualizer=None, **args):
+    def fit(self, X_train, y_train, funcs=None, visualizer=None, **args):
+        self.set_data(X_train, y_train)
         obj_type = 'obj' if 'obj' not in args.keys() else args['obj'].lower()
         obj_type = 'obj' if obj_type not in self.evals.keys() else obj_type
         opt_algo = {'algo': None} if 'algo' not in args.keys() else args['algo']

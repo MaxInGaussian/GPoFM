@@ -87,7 +87,7 @@ def plot_dist(*args):
         sns.distplot(x)
     plt.show()
 
-def load_boston_data(prop=0.65):
+def load_data(prop=0.65):
     from sklearn import datasets
     boston = datasets.load_boston()
     X, y = boston.data, boston.target
@@ -96,31 +96,28 @@ def load_boston_data(prop=0.65):
     train_inds = npr.choice(range(ntrain), int(prop*ntrain), replace=False)
     valid_inds = np.setdiff1d(range(ntrain), train_inds)
     X_train, y_train = X[train_inds].copy(), y[train_inds].copy()
-    X_valid, y_valid = X[valid_inds].copy(), y[valid_inds].copy()
-    return X_train, y_train, X_valid, y_valid
+    X_test, y_test = X[valid_inds].copy(), y[valid_inds].copy()
+    return X_train, y_train, X_test, y_test
 
 ############################ Training Phase ############################
-X_train, y_train, X_valid, y_valid = load_boston_data()
+X_train, y_train, X_test, y_test = load_data()
 for nfeats in nfeats_choices:
     for model_name in use_models:
         ModelClass = getattr(sys.modules['GPoFM'], model_name)
         funcs = None
         results = {en:[] for en in evals.keys()}
         for round in range(reps_per_nfeats):
-            X_train, y_train, X_valid, y_valid = load_boston_data()
+            X_train, y_train, X_test, y_test = load_data()
             model = GPoFM(ModelClass(nfeats=nfeats, penalty=penalty))
             if(funcs is None):
-                model.set_data(X_train, y_train)
-                model.optimize(X_valid, y_valid, None, visualizer, **opt_params)
+                model.fit(X_train, y_train, None, visualizer, **opt_params)
                 funcs = model.get_compiled_funcs()
             else:
-                model.set_data(X_train, y_train)
-                model.optimize(X_valid, y_valid, funcs, visualizer, **opt_params)
+                model.fit(X_train, y_train, funcs, visualizer, **opt_params)
             if(not os.path.exists(BEST_MODEL_PATH)):
                 model.save(BEST_MODEL_PATH)
             else:
                 best_model = GPoFM(Model().load(BEST_MODEL_PATH))
-                best_model.predict(X_valid, y_valid)
                 best_model._print_evals_comparison(model.evals)
                 if(model.evals[select_model_metric][1][-1] <
                     best_model.evals[select_model_metric][1][-1]):

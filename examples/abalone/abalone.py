@@ -87,10 +87,10 @@ def plot_dist(*args):
         sns.distplot(x)
     plt.show()
 
-def load_abalone_data(proportion=1044./4177):
+def load_data(proportion=1044./4177):
     from sklearn import datasets
     from sklearn import preprocessing
-    from sklearn import cross_validation
+    from sklearn import cross_testation
     abalone = datasets.fetch_mldata('regression-datasets abalone')
     X_cate = np.array([abalone.target[i].tolist()
         for i in range(abalone.target.shape[0])])
@@ -99,32 +99,29 @@ def load_abalone_data(proportion=1044./4177):
     y = abalone.int1[0].T.astype(np.float64)
     y = y[:, None]
     X = X.astype(np.float64)
-    X_train, X_valid, y_train, y_valid = \
-        cross_validation.train_test_split(X, y, test_size=proportion)
-    return X_train, y_train, X_valid, y_valid
+    X_train, X_test, y_train, y_test = \
+        cross_testation.train_test_split(X, y, test_size=proportion)
+    return X_train, y_train, X_test, y_test
 
 ############################ Training Phase ############################
-X_train, y_train, X_valid, y_valid = load_abalone_data()
+X_train, y_train, X_test, y_test = load_data()
 for nfeats in nfeats_choices:
     for model_name in use_models:
         ModelClass = getattr(sys.modules['GPoFM'], model_name)
         funcs = None
         results = {en:[] for en in evals.keys()}
         for round in range(reps_per_nfeats):
-            X_train, y_train, X_valid, y_valid = load_abalone_data()
+            X_train, y_train, X_test, y_test = load_data()
             model = GPoFM(ModelClass(nfeats=nfeats, penalty=penalty))
             if(funcs is None):
-                model.set_data(X_train, y_train)
-                model.optimize(X_valid, y_valid, None, visualizer, **opt_params)
+                model.fit(X_train, y_train, None, visualizer, **opt_params)
                 funcs = model.get_compiled_funcs()
             else:
-                model.set_data(X_train, y_train)
-                model.optimize(X_valid, y_valid, funcs, visualizer, **opt_params)
+                model.fit(X_train, y_train, funcs, visualizer, **opt_params)
             if(not os.path.exists(BEST_MODEL_PATH)):
                 model.save(BEST_MODEL_PATH)
             else:
                 best_model = GPoFM(Model().load(BEST_MODEL_PATH))
-                best_model.predict(X_valid, y_valid)
                 best_model._print_evals_comparison(model.evals)
                 if(model.evals[select_model_metric][1][-1] <
                     best_model.evals[select_model_metric][1][-1]):
