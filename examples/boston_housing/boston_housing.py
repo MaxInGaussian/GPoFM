@@ -22,7 +22,7 @@ nfeats_range = [20, 100]
 nfeats_length = nfeats_range[1]-nfeats_range[0]
 nfeats_choices = [nfeats_range[0]+(i*nfeats_length)//8 for i in range(8)]
 plot_metric = 'mse'
-select_params_metric = 'cost'
+select_params_metric = 'obj'
 select_model_metric = 'mse'
 visualizer = None
 # fig = plt.figure(figsize=(8, 6), facecolor='white')
@@ -118,6 +118,9 @@ for nfeats in nfeats_choices:
                 model.save(BEST_MODEL_PATH)
             else:
                 best_model = GPoFM(Model().load(BEST_MODEL_PATH))
+                best_model.set_training_data(X_train, y_train)
+                best_model.evaluate(X_test, y_test)
+                model.evaluate(X_test, y_test)
                 best_model._print_evals_comparison(model.evals)
                 if(model.evals[select_model_metric][1][-1] <
                     best_model.evals[select_model_metric][1][-1]):
