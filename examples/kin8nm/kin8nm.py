@@ -17,10 +17,10 @@ BEST_MODEL_PATH = 'kin8nm.pkl'
 ############################ Prior Setting ############################
 use_models = ['GPoFF', 'GPoLF', 'GPoHF']
 reps_per_nfeats = 20
-penalty = 1e-2
-nfeats_range = [20, 100]
+penalty = 1.
+nfeats_range = [10, 60]
 nfeats_length = nfeats_range[1]-nfeats_range[0]
-nfeats_choices = [nfeats_range[0]+(i*nfeats_length)//8 for i in range(8)]
+nfeats_choices = [nfeats_range[0]+(i*nfeats_length)//5 for i in range(5)]
 plot_metric = 'mse'
 select_params_metric = 'score'
 select_model_metric = 'score'
