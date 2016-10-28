@@ -113,7 +113,7 @@ class GPoLF(Model):
         obj = (nlml+penelty*self.setting['penalty'])/X.shape[0]
         grads = TT.grad(obj, params)
         updates = getattr(Optimizer, opt_algo)(self.params, grads, **opt_params)
-        updates = getattr(Optimizer, 'apply_momentum')(updates, momentum=0.9)
+        updates = getattr(Optimizer, 'nesterov_momentum')(updates, momentum=0.9)
         train_inputs = [X, y]
         train_outputs = [obj, alpha, Li, mu_f]
         self.compiled_funcs['opt'] = Tf(train_inputs, train_outputs,

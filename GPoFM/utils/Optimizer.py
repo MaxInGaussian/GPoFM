@@ -17,8 +17,8 @@ __all__ = [
 class Optimizer(object):
 
     algos = [
-        "apply_momentum",
-        "apply_nesterov_momentum",
+        "momentum",
+        "nesterov_momentum",
         "sgd",
         "adagrad",
         "rmsprop",
@@ -30,7 +30,7 @@ class Optimizer(object):
     ]
     
     @staticmethod
-    def apply_momentum(updates, momentum=0.9):
+    def momentum(updates, momentum=0.9):
         """Returns a modified update dictionary including momentum
         Generates update expressions of the form:
     *``velocity := momentum*velocity+updates[param]-param``
@@ -65,7 +65,7 @@ class Optimizer(object):
         return updates
     
     @staticmethod
-    def apply_nesterov_momentum(updates, momentum=0.9):
+    def nesterov_momentum(updates, momentum=0.9):
         """Returns a modified update dictionary including Nesterov momentum
         Generates update expressions of the form:
         *``velocity := momentum*velocity+updates[params]-params``
