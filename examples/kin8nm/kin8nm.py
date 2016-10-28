@@ -16,13 +16,13 @@ BEST_MODEL_PATH = 'kin8nm.pkl'
 
 ############################ Prior Setting ############################
 use_models = ['GPoFF', 'GPoLF', 'GPoHF']
-reps_per_nfeats = 50
-penalty = 1e-1
+reps_per_nfeats = 20
+penalty = 1e-2
 nfeats_range = [20, 100]
 nfeats_length = nfeats_range[1]-nfeats_range[0]
 nfeats_choices = [nfeats_range[0]+(i*nfeats_length)//8 for i in range(8)]
 plot_metric = 'mse'
-select_params_metric = 'cost'
+select_params_metric = 'score'
 select_model_metric = 'score'
 visualizer = None
 # fig = plt.figure(figsize=(8, 6), facecolor='white')
@@ -30,7 +30,7 @@ visualizer = None
 algo = {
     'algo': 'adam',
     'algo_params': {
-        'learning_rate':0.01,
+        'learning_rate':0.005,
         'beta1':0.9,
         'beta2':0.999,
         'epsilon':1e-8
