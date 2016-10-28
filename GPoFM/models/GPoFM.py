@@ -163,7 +163,7 @@ class Model(object):
         score = nmse/(1+np.exp(-mnlp))
         self.evals['score'][1].append(score)
 
-    def cross_validate(self, X, y, nfolds=5):
+    def cross_validate(self, X, y, nfolds):
         cv_evals_sum = {metric: [] for metric in self.evals.keys()}
         cv_batches = self.minibatches(X, y, (self.N+1)//nfolds)
         for i in range(nfolds):
@@ -191,6 +191,7 @@ class Model(object):
         obj_type = 'obj' if 'obj' not in args.keys() else args['obj'].lower()
         obj_type = 'obj' if obj_type not in self.evals.keys() else obj_type
         opt_algo = {'algo': None} if 'algo' not in args.keys() else args['algo']
+        cv_nfolds = 5 if 'cv_nfolds' not in args.keys() else args['cv_nfolds']
         cvrg_tol = 1e-4 if 'cvrg_tol' not in args.keys() else args['cvrg_tol']
         max_cvrg = 18 if 'max_cvrg' not in args.keys() else args['max_cvrg']
         max_iter = 500 if 'max_iter' not in args.keys() else args['max_iter']
@@ -220,7 +221,7 @@ class Model(object):
         min_obj, min_obj_val = np.Infinity, np.Infinity
         argmin_params, cvrg_iter = self.params, 0
         for iter in range(max_iter):
-            self.cross_validate(X_train, y_train)
+            self.cross_validate(X_train, y_train, cv_nfolds)
             if(iter%(max_iter//10) == 1):
                 self.echo('-'*26, 'VALIDATION ITERATION', iter, '-'*27)
                 self._print_current_evals()
@@ -245,7 +246,7 @@ class Model(object):
                 randp = np.random.rand()*cvrg_iter/max_cvrg*0.5
                 self.params = (1-randp)*self.params+randp*argmin_params
         self.params = argmin_params.copy()
-        self.cross_validate(X_train, y_train)
+        self.cross_validate(X_train, y_train, cv_nfolds)
         self.evals_ind = -1
         verbose = self.verbose
         self.verbose = True

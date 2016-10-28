@@ -18,11 +18,11 @@ BEST_MODEL_PATH = 'boston.pkl'
 use_models = ['GPoFF', 'GPoLF', 'GPoHF']
 reps_per_nfeats = 50
 penalty = 1e-1
-nfeats_range = [20, 100]
+nfeats_range = [10, 60]
 nfeats_length = nfeats_range[1]-nfeats_range[0]
-nfeats_choices = [nfeats_range[0]+(i*nfeats_length)//8 for i in range(8)]
+nfeats_choices = [nfeats_range[0]+(i*nfeats_length)//5 for i in range(5)]
 plot_metric = 'mse'
-select_params_metric = 'obj'
+select_params_metric = 'score'
 select_model_metric = 'score'
 visualizer = None
 # fig = plt.figure(figsize=(8, 6), facecolor='white')
@@ -30,7 +30,7 @@ visualizer = None
 algo = {
     'algo': 'adam',
     'algo_params': {
-        'learning_rate':0.01,
+        'learning_rate':0.005,
         'beta1':0.9,
         'beta2':0.999,
         'epsilon':1e-8
@@ -39,7 +39,7 @@ algo = {
 opt_params = {
     'obj': select_params_metric,
     'algo': algo,
-    'nbatches': 1,
+    'nbatches': 1, 
     'cvrg_tol': 1e-5,
     'max_cvrg': 8,
     'max_iter': 200
@@ -134,6 +134,7 @@ for nfeats in nfeats_choices:
             eval = (np.median(results[en]), np.std(results[en]))
             evals[en][1][model_name].append(eval)
 
+
 ############################ Plot Performances ############################
 import os
 if not os.path.exists('plots'):
@@ -157,4 +158,4 @@ for en, (metric_name, metric_result) in evals.items():
     ax.legend(handles, labels, loc='upper right', ncol=1, fancybox=True)
     plt.xlabel('Number of Features', fontsize=13)
     plt.ylabel(en, fontsize=13)
-    plt.savefig('plots/'+en.lower()+'.png')
+    plt.savefig('plots/'+en.lower()+'_penalty=%.2f'%(penalty)+'.png')

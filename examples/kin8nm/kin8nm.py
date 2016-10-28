@@ -16,7 +16,7 @@ BEST_MODEL_PATH = 'kin8nm.pkl'
 
 ############################ Prior Setting ############################
 use_models = ['GPoFF', 'GPoLF', 'GPoHF']
-reps_per_nfeats = 20
+reps_per_nfeats = 50
 penalty = 1.
 nfeats_range = [10, 60]
 nfeats_length = nfeats_range[1]-nfeats_range[0]
@@ -87,7 +87,7 @@ def plot_dist(*args):
         sns.distplot(x)
     plt.show()
 
-def load_data(proportion=3192./8192):
+def load_data(prop=3192./8192):
     from sklearn import datasets
     from sklearn import cross_validation
     kin8nm = datasets.fetch_mldata('regression-datasets kin8nm')
@@ -95,7 +95,7 @@ def load_data(proportion=3192./8192):
     y = y[:, None]
     X = X.astype(np.float64)
     X_train, X_test, y_train, y_test = \
-        cross_validation.train_test_split(X, y, test_size=proportion)
+        cross_validation.train_test_split(X, y, test_size=prop)
     return X_train, y_train, X_test, y_test
 
 ############################ Training Phase ############################
@@ -157,4 +157,4 @@ for en, (metric_name, metric_result) in evals.items():
     ax.legend(handles, labels, loc='upper right', ncol=1, fancybox=True)
     plt.xlabel('Number of Features', fontsize=13)
     plt.ylabel(en, fontsize=13)
-    plt.savefig('plots/'+en.lower()+'.png')
+    plt.savefig('plots/'+en.lower()+'_penalty=%.2f'%(penalty)+'.png')
