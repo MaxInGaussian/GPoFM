@@ -165,7 +165,7 @@ class Model(object):
 
     def cross_validate(self, X, y, nfolds):
         cv_evals_sum = {metric: [] for metric in self.evals.keys()}
-        cv_batches = self.minibatches(X, y, (self.N+1)//nfolds)
+        cv_batches = self.minibatches(X, y, int(np.ceil(self.N/nfolds)))
         for i in range(nfolds):
             Xt, yt = [], []
             for Xb, yb in cv_batches[:i]+cv_batches[i+1:]:
