@@ -20,7 +20,7 @@ use_models = ['GPoFF', 'GPoTFF', 'GPoCFF',
               'GPoAF', 'GPoTAF', 'GPoCAF']
 num = 5
 reps_per_nfeats = 10
-penalty = 1e-2
+penalty = 1
 nfeats_range = [10, num*10]
 nfeats_length = nfeats_range[1]-nfeats_range[0]
 nfeats_choice = [nfeats_range[0]+(i*nfeats_length)//(num-1) for i in range(num)]
@@ -151,13 +151,15 @@ for i, nfeats in enumerate(nfeats_choice):
                 minv = min(minv, metric_result[model_name][j][0])
                 ax.text(nfeats_choice[j], metric_result[model_name][j][0],
                     '%.2f'%(metric_result[model_name][j][0]), fontsize=5)
-            line = ax.errorbar(nfeats_choice, [metric_result[model_name][j][0]
-                for j in range(i+1)], fmt='-o', label=model_name)
+            line = ax.errorbar(nfeats_choice[:i+1],
+                [metric_result[model_name][j][0] for j in range(i+1)],
+                yerr=[metric_result[model_name][j][1] for j in range(i+1)],
+                fmt='-o', label=model_name)
         ax.set_xlim([min(nfeats_choice)-10, max(nfeats_choice)+10])
         ax.set_ylim([minv-(maxv-minv)*0.15,maxv+(maxv-minv)*0.45])
         plt.title(metric_name, fontsize=18)
         handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles, labels, loc='upper right', ncol=1, fancybox=True)
+        ax.legend(handles, labels, loc='upper left', ncol=2, fancybox=True)
         plt.xlabel('Number of Features', fontsize=13)
         plt.ylabel(en, fontsize=13)
         plt.savefig('plots/'+en.lower()+'_penalty=%.2f'%(penalty)+'.png')

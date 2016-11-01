@@ -24,7 +24,22 @@ class Visualizer(object):
         self.fig = fig
         self.eval = eval.lower()
         self.plot_limit = plot_limit
-    
+
+    def similarity_plot(self):
+        self.fig.suptitle(self.model.__str__(), fontsize=15)
+        ax = self.fig.add_subplot(111)
+        def animate(i):
+            ax.cla()
+            pts = 300
+            ax.plot(Xs[:, 0], mu, alpha=0.8, c='black')
+            ax.errorbar(self.model.Xt[:, 0],
+                self.model.yt.ravel(), fmt='r.', markersize=5, alpha=0.6)
+            yrng = self.model.yt.max()-self.model.yt.min()
+            ax.set_ylim([
+                self.model.yt.min()-0.5*yrng, self.model.yt.max() + 0.5*yrng])
+            ax.set_xlim([-0.1, 1.1])
+        return animate
+            
     def train_plot(self):
         if(self.model.D == 1):
             return self.train_1d_plot()

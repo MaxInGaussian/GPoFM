@@ -195,7 +195,7 @@ class Model(object):
         sig_w = TT.std(FF, axis=1)
         nlml = 2*TT.log(TT.diagonal(L)).sum()+1./sig2_n*(
             (y**2).sum()-(beta**2).sum())+(X.shape[0]-S)*TT.log(sig2_n)
-        penelty = kl(mu_w, sig_w)+kl(TT.mean(params), TT.std(params))
+        penelty = kl(mu_w, sig_w)
         obj = (nlml+penelty*self.setting['penalty'])/X.shape[0]
         grads = TT.grad(obj, params)
         updates = getattr(Optimizer, opt_algo)(self.params, grads, **opt_params)
