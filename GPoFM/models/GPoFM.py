@@ -10,6 +10,7 @@ import numpy as np
 import numpy.random as npr
 import matplotlib.pyplot as plt
 from theano import shared as Ts, function as Tf, tensor as TT
+from theano.sandbox import linalg as Tlin
 
 from .. import *
 
@@ -60,12 +61,19 @@ class Model(object):
     X, y, X_Trans, y_Trans, params, compiled_funcs, trained_mats = [None]*7
     
     def __init__(self, **args):
-        Xt = 'auto-uniform' if 'X_trans' not in args.keys() else args['X_trans']
-        yt = 'auto-normal' if 'y_trans' not in args.keys() else args['y_trans']
+        nfeats = 50 if 'nfeats' not in args.keys() else args['nfeats']
+        penalty = 1e-1 if 'penalty' not in args.keys() else args['penalty']
+        Xt = 'min-max' if 'X_trans' not in args.keys() else args['X_trans']
+        yt = 'normal' if 'y_trans' not in args.keys() else args['y_trans']
         verbose = False if 'verbose' not in args.keys() else args['verbose']
         self.trans = {'X': Transformer(Xt), 'y': Transformer(yt)}
         self.verbose = verbose
-        self.generate_instance_identifier()
+        rand_str = ''.join(chr(npr.choice([ord(c) for c in (
+            string.ascii_uppercase+string.digits)])) for _ in range(5))
+        self.setting = {}
+        self.setting['id'] = self.__class__.__name__+'-'+rand_str
+        self.setting['nfeats'] = nfeats
+        self.setting['penalty'] = penalty
         self.evals = {
             'score': ['Model Selection Score', []],
             'obj': ['Params Optimization Objective', []],
@@ -109,25 +117,20 @@ class Model(object):
             print(' '.join(map(str, arg)))
             sys.stdout.flush()
     
-    def generate_instance_identifier(self):
-        self.setting = {'id': self.__class__.__name__+'-'+''.join(
-            chr(npr.choice([ord(c) for c in (
-                string.ascii_uppercase+string.digits)])) for _ in range(5))}
-    
     def get_compiled_funcs(self):
         return self.compiled_funcs
     
-    def minibatches(self, X, y, batchsize, shuffle=True):
+    def minibatches(self, X, y, nfolds, shuffle=True):
         assert len(X) == len(y)
         if(shuffle):
             inds = np.arange(len(X))
             npr.shuffle(inds)
         batches = []
-        for start_ind in range(0, len(X)-batchsize+1, batchsize):
+        for start_ind in range(nfolds):
             if shuffle:
-                batch = inds[start_ind:start_ind+batchsize]
+                batch = inds[start_ind:start_ind+len(X)//nfolds]
             else:
-                batch = slice(start_ind, start_ind+batchsize)
+                batch = slice(start_ind, start_ind+len(X)//nfolds)
             batches.append((X[batch], y[batch]))
         return batches
 
@@ -141,12 +144,81 @@ class Model(object):
         self.N, self.D = self.Xt.shape
         if(self.params is None):
             self.echo('-'*80, '\nInitializing hyperparameters...')
-            self.init_params()
+            self.params = Ts(np.concatenate(self.randomized_params()))
             self.echo('done.')
         else:
             trained_mats = self.compiled_funcs['opt' if update_params else
                 'train'](self.Xt, self.yt)
             self.trained_mats = self.unpack_trained_mats(trained_mats)
+    
+    def unpack_trained_mats(self, trained_mats):
+        return {'obj': np.double(trained_mats[0]),
+                'alpha': trained_mats[1],
+                'Li': trained_mats[2],
+                'mu_f': trained_mats[3],}
+    
+    def unpack_predicted_mats(self, predicted_mats):
+        return {'mu_fs': predicted_mats[0],
+                'std_fs': predicted_mats[1],}
+
+    def theano_input_data(self, params):
+        return TT.dmatrices('X')
+
+    def theano_output_data(self, params, inverse=None):
+        if(inverse is not None):
+            return inverse
+        return TT.dmatrices('y')
+    
+    def pack_train_func_inputs(self, X, y):
+        return [X, y]
+    
+    def pack_pred_func_inputs(self, Xs):
+        return [Xs, self.trained_mats['alpha'], self.trained_mats['Li']]
+
+    def compile_theano_funcs(self, opt_algo, opt_params):
+        self.compiled_funcs = {}
+        eps, S = 1e-6, self.setting['nfeats']
+        kl = lambda mu, std: TT.mean(std+mu**2-TT.log(std))
+        params = TT.dvector('params')
+        X = self.theano_input_data(params)
+        y = self.theano_output_data(params)
+        sig2_n, FF, Phi = self.feature_maps(X, params)
+        PhiTPhi = TT.dot(Phi.T, Phi)
+        A = PhiTPhi+(sig2_n+eps)*TT.identity_like(PhiTPhi)
+        L = Tlin.cholesky(A)
+        Li = Tlin.matrix_inverse(L)
+        PhiTy = Phi.T.dot(y)
+        beta = TT.dot(Li, PhiTy)
+        alpha = TT.dot(Li.T, beta)
+        mu_f = TT.dot(Phi, alpha)
+        mu_w = TT.mean(FF, axis=1)
+        sig_w = TT.std(FF, axis=1)
+        nlml = 2*TT.log(TT.diagonal(L)).sum()+1./sig2_n*(
+            (y**2).sum()-(beta**2).sum())+(X.shape[0]-S)*TT.log(sig2_n)
+        penelty = kl(mu_w, sig_w)+kl(TT.mean(params), TT.std(params))
+        obj = (nlml+penelty*self.setting['penalty'])/X.shape[0]
+        grads = TT.grad(obj, params)
+        updates = getattr(Optimizer, opt_algo)(self.params, grads, **opt_params)
+        updates = getattr(Optimizer, 'nesterov_momentum')(updates, momentum=0.9)
+        train_inputs = [X, y]
+        train_outputs = [obj, alpha, Li, mu_f]
+        self.compiled_funcs['opt'] = Tf(train_inputs, train_outputs,
+            givens=[(params, self.params)], updates=updates)
+        self.compiled_funcs['train'] = Tf(train_inputs, train_outputs,
+            givens=[(params, self.params)])
+        Li, alpha = TT.dmatrices('Li', 'alpha')
+        Xs = self.theano_input_data(params)
+        sig2_n, _, Phis = self.feature_maps(Xs, params)
+        mu_pred = TT.dot(Phis, alpha)
+        std_pred = ((sig2_n*(1+(TT.dot(Phis, Li.T)**2).sum(1)))**0.5)[:, None]
+        up_bnd = self.theano_output_data(params, mu_pred+std_pred)
+        lw_bnd = self.theano_output_data(params, mu_pred-std_pred)
+        mu_pred = self.theano_output_data(params, mu_pred)
+        std_pred = 0.5*(up_bnd-lw_bnd)
+        pred_inputs = [Xs, alpha, Li]
+        pred_outputs = [mu_pred, std_pred]
+        self.compiled_funcs['pred'] = Tf(pred_inputs, pred_outputs,
+            givens=[(params, self.params)])
 
     def evaluate(self, X, y):
         mu, std = self.predict(X)
@@ -165,7 +237,7 @@ class Model(object):
 
     def cross_validate(self, X, y, nfolds):
         cv_evals_sum = {metric: [] for metric in self.evals.keys()}
-        cv_batches = self.minibatches(X, y, int(np.ceil(self.N/nfolds)))
+        cv_batches = self.minibatches(X, y, nfolds)
         for i in range(nfolds):
             Xt, yt = [], []
             for Xb, yb in cv_batches[:i]+cv_batches[i+1:]:
@@ -215,7 +287,7 @@ class Model(object):
             self.compiled_funcs = funcs
         if(visualizer is not None):
             visualizer.model = self
-            animate = visualizer.train_with_plot()
+            animate = visualizer.train_plot()
         self.evals_ind = 0
         self.train_start_time = time.time()
         min_obj, min_obj_val = np.Infinity, np.Infinity
@@ -262,8 +334,8 @@ class Model(object):
         mu_fs = self.predicted_mats['mu_fs']
         std_fs = self.predicted_mats['std_fs']
         mu_ys = self.trans['y'].recover(mu_fs)
-        up_bnd_ys = self.trans['y'].recover(mu_fs+std_fs[:, None])
-        dn_bnd_ys = self.trans['y'].recover(mu_fs-std_fs[:, None])
+        up_bnd_ys = self.trans['y'].recover(mu_fs+std_fs)
+        dn_bnd_ys = self.trans['y'].recover(mu_fs-std_fs)
         std_ys = 0.5*(up_bnd_ys-dn_bnd_ys)
         return mu_ys, std_ys
 

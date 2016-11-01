@@ -25,13 +25,13 @@ class Visualizer(object):
         self.eval = eval.lower()
         self.plot_limit = plot_limit
     
-    def train_with_plot(self):
+    def train_plot(self):
         if(self.model.D == 1):
-            return self.train_with_1d_plot()
+            return self.train_1d_plot()
         else:
-            return self.train_with_eval_plot()
+            return self.train_eval_plot()
     
-    def train_with_1d_plot(self):
+    def train_1d_plot(self):
         self.fig.suptitle(self.model.__str__(), fontsize=15)
         ax = self.fig.add_subplot(111)
         def animate(i):
@@ -56,7 +56,7 @@ class Visualizer(object):
             ax.set_xlim([-0.1, 1.1])
         return animate
     
-    def train_with_eval_plot(self):
+    def train_eval_plot(self):
         self.fig.suptitle(self.model.__str__(), fontsize=15)
         ax1 = self.fig.add_subplot(211)
         ax2 = self.fig.add_subplot(212)

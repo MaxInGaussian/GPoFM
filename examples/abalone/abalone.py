@@ -15,12 +15,15 @@ from GPoFM import *
 BEST_MODEL_PATH = 'abalone.pkl'
 
 ############################ Prior Setting ############################
-use_models = ['GPoFF', 'GPoLF', 'GPoHF']
-reps_per_nfeats = 50
-penalty = 1.
-nfeats_range = [10, 60]
+use_models = ['GPoFF', 'GPoTFF', 'GPoCFF',
+              'GPoHF', 'GPoTHF', 'GPoCHF',
+              'GPoAF', 'GPoTAF', 'GPoCAF']
+num = 6
+reps_per_nfeats = 20
+penalty = 1
+nfeats_range = [10, num*10]
 nfeats_length = nfeats_range[1]-nfeats_range[0]
-nfeats_choices = [nfeats_range[0]+(i*nfeats_length)//5 for i in range(5)]
+nfeats_choice = [nfeats_range[0]+(i*nfeats_length)//(num-1) for i in range(num)]
 plot_metric = 'mse'
 select_params_metric = 'score'
 select_model_metric = 'score'
@@ -39,7 +42,7 @@ algo = {
 opt_params = {
     'obj': select_params_metric,
     'algo': algo,
-    'nbatches': 1,
+    'cv_nfolds': 5,
     'cvrg_tol': 1e-5,
     'max_cvrg': 8,
     'max_iter': 200
@@ -87,31 +90,30 @@ def plot_dist(*args):
         sns.distplot(x)
     plt.show()
 
-def load_data(prop=1044./4177):
+def load_data(prop=3133./4177):
     from sklearn import datasets
     from sklearn import preprocessing
-    from sklearn import cross_validation
     abalone = datasets.fetch_mldata('regression-datasets abalone')
     X_cate = np.array([abalone.target[i].tolist()
         for i in range(abalone.target.shape[0])])
     X_cate = preprocessing.label_binarize(X_cate, np.unique(X_cate))
     X = np.hstack((X_cate, abalone.data))
-    y = abalone.int1[0].T.astype(np.float64)
-    y = y[:, None]
-    X = X.astype(np.float64)
-    X_train, X_test, y_train, y_test = \
-        cross_validation.train_test_split(X, y, test_size=prop)
+    y = abalone.int1[0].T.astype(np.float64)[:, None]
+    ntrain = y.shape[0]
+    train_inds = npr.choice(range(ntrain), int(prop*ntrain), replace=False)
+    test_inds = np.setdiff1d(range(ntrain), train_inds)
+    X_train, y_train = X[train_inds].copy(), y[train_inds].copy()
+    X_test, y_test = X[test_inds].copy(), y[test_inds].copy()
     return X_train, y_train, X_test, y_test
 
 ############################ Training Phase ############################
 X_train, y_train, X_test, y_test = load_data()
-for nfeats in nfeats_choices:
+for i, nfeats in enumerate(nfeats_choice):
     for model_name in use_models:
         ModelClass = getattr(sys.modules['GPoFM'], model_name)
         funcs = None
         results = {en:[] for en in evals.keys()}
         for round in range(reps_per_nfeats):
-            X_train, y_train, X_test, y_test = load_data()
             model = GPoFM(ModelClass(nfeats=nfeats, penalty=penalty))
             if(funcs is None):
                 model.fit(X_train, y_train, None, visualizer, **opt_params)
@@ -135,31 +137,30 @@ for nfeats in nfeats_choices:
             for res in evals.keys():
                 results[res].append(model.evals[res][1][-1])
         for en in evals.keys():
-            eval = (np.median(results[en]), np.std(results[en]))
+            eval = (np.mean(results[en]), np.std(results[en]))
             evals[en][1][model_name].append(eval)
 
-
 ############################ Plot Performances ############################
-import os
-if not os.path.exists('plots'):
-    os.mkdir('plots')
-for en, (metric_name, metric_result) in evals.items():
-    f = plt.figure(figsize=(8, 6), facecolor='white', dpi=120)
-    ax = f.add_subplot(111)
-    maxv, minv = 0, 1e5
-    for model_name in metric_result.keys():
-        for i in range(len(nfeats_choices)):
-            maxv = max(maxv, metric_result[model_name][i][0])
-            minv = min(minv, metric_result[model_name][i][0])
-            ax.text(nfeats_choices[i], metric_result[model_name][i][0],
-                '%.2f'%(metric_result[model_name][i][0]), fontsize=5)
-        line = ax.errorbar(nfeats_choices, [metric_result[model_name][i][0]
-            for i in range(len(nfeats_choices))], fmt='-o', label=model_name)
-    ax.set_xlim([min(nfeats_choices)-10, max(nfeats_choices)+10])
-    ax.set_ylim([minv-(maxv-minv)*0.15,maxv+(maxv-minv)*0.45])
-    plt.title(metric_name, fontsize=18)
-    handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles, labels, loc='upper right', ncol=1, fancybox=True)
-    plt.xlabel('Number of Features', fontsize=13)
-    plt.ylabel(en, fontsize=13)
-    plt.savefig('plots/'+en.lower()+'_penalty=%.2f'%(penalty)+'.png')
+    import os
+    if not os.path.exists('plots'):
+        os.mkdir('plots')
+    for en, (metric_name, metric_result) in evals.items():
+        f = plt.figure(figsize=(8, 6), facecolor='white', dpi=120)
+        ax = f.add_subplot(111)
+        maxv, minv = 0, 1e5
+        for model_name in metric_result.keys():
+            for j in range(i+1):
+                maxv = max(maxv, metric_result[model_name][j][0])
+                minv = min(minv, metric_result[model_name][j][0])
+                ax.text(nfeats_choice[j], metric_result[model_name][j][0],
+                    '%.2f'%(metric_result[model_name][j][0]), fontsize=5)
+            line = ax.errorbar(nfeats_choice, [metric_result[model_name][j][0]
+                for j in range(i+1)], fmt='-o', label=model_name)
+        ax.set_xlim([min(nfeats_choice)-10, max(nfeats_choice)+10])
+        ax.set_ylim([minv-(maxv-minv)*0.15,maxv+(maxv-minv)*0.45])
+        plt.title(metric_name, fontsize=18)
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles, labels, loc='upper right', ncol=1, fancybox=True)
+        plt.xlabel('Number of Features', fontsize=13)
+        plt.ylabel(en, fontsize=13)
+        plt.savefig('plots/'+en.lower()+'_penalty=%.2f'%(penalty)+'.png')

@@ -15,22 +15,22 @@ from . import Model
 from .. import Optimizer
 
 __all__ = [
-    "GPoFF",
-    "GPoCFF",
-    "GPoTFF",
+    "GPoAF",
+    "GPoTAF",
+    "GPoCAF",
 ]
 
 
-class GPoFF(Model):
+class GPoAF(Model):
     
     '''
-    The :class:`GPoFF` class implemented a GPoFM model:
-        Gaussian process Optimizing Fourier Feature Maps (GPoFF)
+    The :class:`GPoAF` class implemented a GPoFM model:
+        Gaussian process Optimizing Activation Feature Maps (GPoAF)
     
     Parameters
     ----------
     nfeats : an integer
-        Number of Fourier Features
+        Number of Activation Features
     penalty : a float
         Penalty for too complex function. default: 1.
     X_trans : a string
@@ -43,11 +43,13 @@ class GPoFF(Model):
     
     setting, compiled_funcs = None, None
     
-    def __init__(self, **args):
-        super(GPoFF, self).__init__(**args)
+    def __init__(self, nfeats=50, penalty=1., **args):
+        super(GPoAF, self).__init__(**args)
+        self.setting['nfeats'] = nfeats
+        self.setting['penalty'] = penalty
     
     def __str__(self):
-        return "GPoFF (Fourier = %d)"%(self.setting['nfeats'])
+        return "GPoAF (Activation = %d)"%(self.setting['nfeats'])
 
     def randomized_params(self):
         S = self.setting['nfeats']
@@ -59,22 +61,22 @@ class GPoFF(Model):
     
     def feature_maps(self, X, params):
         t_ind, S = 0, self.setting['nfeats']
-        a = params[0]; t_ind+=1; b = params[1]; t_ind+=1
+        a = params[0]; t_ind += 1; b = params[1]; t_ind += 1
         sig2_n, sig2_f = TT.exp(2*a), TT.exp(b)
-        l = params[t_ind:t_ind+self.D]; t_ind+=self.D
-        f = params[t_ind:t_ind+self.D*S]; t_ind+=self.D*S
+        l = params[t_ind:t_ind+self.D]; t_ind += self.D
+        f = params[t_ind:t_ind+self.D*S]; t_ind += self.D*S
         F = TT.reshape(f, (self.D, S))/np.exp(l[:, None])
-        p = params[t_ind:t_ind+S]; t_ind+=S
+        p = params[t_ind:t_ind+S]; t_ind += S
         P = TT.reshape(p, (1, S))-TT.mean(F, 0)[None, :]
         FF = TT.dot(X, F)+P
-        Phi = TT.cos(FF)*TT.sqrt(sig2_f/FF.shape[1])
+        Phi = TT.tanh(FF)*TT.sqrt(sig2_f/FF.shape[1])
         return sig2_n, FF, Phi
 
-class GPoTFF(GPoFF):
+class GPoTAF(GPoAF):
     
     '''
-    The :class:`GPoTFF` class implemented a GPoFM model:
-        Gaussian process Optimizing Transformed Fourier Feature Maps (GPoTFF)
+    The :class:`GPoTAF` class implemented a GPoFM model:
+        Gaussian process Optimizing Transformed Activation Feature Maps (GPoTAF)
     
     Parameters
     ----------
@@ -93,10 +95,10 @@ class GPoTFF(GPoFF):
     setting, compiled_funcs = None, None
     
     def __init__(self, **args):
-        super(GPoTFF, self).__init__(**args)
+        super(GPoTAF, self).__init__(**args)
     
     def __str__(self):
-        return "GPoTFF (Fourier = %d)"%(self.setting['nfeats'])
+        return "GPoTAF (Fourier = %d)"%(self.setting['nfeats'])
 
     def transform_inputs(self, params):
         sign = lambda x: TT.tanh(x*1e3)
@@ -118,20 +120,20 @@ class GPoTFF(GPoFF):
 
     def randomized_params(self):
         lm = 2*np.pi*npr.rand(self.D+1)
-        return super(GPoTFF, self).randomized_params()+[lm]
+        return super(GPoTAF, self).randomized_params()+[lm]
 
-class GPoCFF(GPoFF):
+class GPoCAF(GPoAF):
     
     '''
-    The :class:`GPoCFF` class implemented a GPoFM model:
-        Gaussian process Optimizing Correlated Fourier Feature Maps (GPoCFF)
+    The :class:`GPoCAF` class implemented a GPoFM model:
+        Gaussian process Optimizing Correlated Activation Feature Maps (GPoCAF)
     
     Parameters
     ----------
     ncorr : an integer
-        Number of correlated Fourier features
+        Number of correlated Activation features
     nfeats : an integer
-        Number of Fourier Features (nfeats > ncorr)
+        Number of Activation Features (nfeats > ncorr)
     penalty : a float
         Penalty for too complex function. default: 1.
     X_trans : a string
@@ -145,12 +147,12 @@ class GPoCFF(GPoFF):
     setting, compiled_funcs = None, None
     
     def __init__(self, ncorr=10, **args):
-        super(GPoCFF, self).__init__(**args)
+        super(GPoCAF, self).__init__(**args)
         self.setting['ncorr'] = ncorr
     
     def __str__(self):
         S, M = self.setting['nfeats'], self.setting['ncorr']
-        return "GPoCFF (Fourier = %d, Corr. Fourier = %d)"%(S, M)
+        return "GPoCAF (Activation = %d, Corr. Activation = %d)"%(S, M)
 
     def randomized_params(self):
         S, M = self.setting['nfeats'], self.setting['ncorr']
@@ -168,12 +170,14 @@ class GPoCFF(GPoFF):
         l = params[t_ind:t_ind+self.D]; t_ind += self.D
         l_f = params[t_ind:t_ind+self.D*M]; t_ind += self.D*M
         l_F = TT.reshape(l_f, (self.D, M))
-        r_f = params[t_ind:t_ind+M*S]; t_ind += M*S
+        r_f = params[t_ind:t_ind+M*S]; t_ind+=M*S
         r_F = TT.reshape(r_f, (S, M))/M
         F = l_F.dot(r_F.T)/np.exp(l[:, None])
         p = params[t_ind:t_ind+S]; t_ind += S
         P = TT.reshape(p, (1, S))-TT.mean(F, 0)[None, :]
         FF = TT.dot(X, F)+P
-        Phi = TT.cos(FF)*TT.sqrt(sig2_f/FF.shape[1])
+        Phi = TT.tanh(FF)*TT.sqrt(sig2_f/FF.shape[1])
         return sig2_n, FF, Phi
-
+            
+            
+            
