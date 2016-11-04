@@ -8,6 +8,9 @@ Author: Max W. Y. Lam [maxingaussian@gmail.com]
 import numpy as np
 import matplotlib.pyplot as plt
 
+from theano import shared as Ts, function as Tf, tensor as TT
+from theano.sandbox import linalg as Tlin
+
 from .. import __init__
 
 __all__ = [
@@ -26,18 +29,23 @@ class Visualizer(object):
         self.plot_limit = plot_limit
 
     def similarity_plot(self):
+        from sklearn.decomposition import PCA
         self.fig.suptitle(self.model.__str__(), fontsize=15)
         ax = self.fig.add_subplot(111)
         def animate(i):
             ax.cla()
-            pts = 300
-            ax.plot(Xs[:, 0], mu, alpha=0.8, c='black')
-            ax.errorbar(self.model.Xt[:, 0],
-                self.model.yt.ravel(), fmt='r.', markersize=5, alpha=0.6)
-            yrng = self.model.yt.max()-self.model.yt.min()
-            ax.set_ylim([
-                self.model.yt.min()-0.5*yrng, self.model.yt.max() + 0.5*yrng])
-            ax.set_xlim([-0.1, 1.1])
+            pts = 100
+            Xs = Ts(np.tile(np.linspace(0., 1., pts), (self.model.D, 1)).T)
+            Phi = self.model.feature_maps(Xs, self.model.params)[-1].eval()
+            pca = PCA(n_components=2)
+            X_r = pca.fit(Phi).transform(Phi)
+            ax.contourf(X_r[:, 0], X_r[:, 1], self.model.yt.ravel())
+            # surf = ax.plot_surface(X, Y, Z, rstride=5, cstride=5, cmap=cm.jet,
+            #                     linewidth=1, antialiased=True)
+            # 
+            # ax.set_zlim3d(np.min(Z), np.max(Z))
+            # fig.colorbar(surf)
+            ax.colorbar()
         return animate
             
     def train_plot(self):
@@ -66,8 +74,7 @@ class Visualizer(object):
             ax.errorbar(self.model.Xt[:, 0],
                 self.model.yt.ravel(), fmt='r.', markersize=5, alpha=0.6)
             yrng = self.model.yt.max()-self.model.yt.min()
-            ax.set_ylim([
-                self.model.yt.min()-0.5*yrng, self.model.yt.max() + 0.5*yrng])
+            ax.set_ylim([self.model.yt.min(), self.model.yt.max()+0.5*yrng])
             ax.set_xlim([-0.1, 1.1])
         return animate
     

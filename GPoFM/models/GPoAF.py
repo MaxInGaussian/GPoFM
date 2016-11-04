@@ -62,7 +62,7 @@ class GPoAF(Model):
     def feature_maps(self, X, params):
         t_ind, S = 0, self.setting['nfeats']
         a = params[0]; t_ind += 1; b = params[1]; t_ind += 1
-        sig2_n, sig2_f = TT.exp(2*a), TT.exp(b)
+        sig2_n, sig2_f = TT.exp(a), TT.exp(b)
         l = params[t_ind:t_ind+self.D]; t_ind += self.D
         f = params[t_ind:t_ind+self.D*S]; t_ind += self.D*S
         F = TT.reshape(f, (self.D, S))/np.exp(l[:, None])
@@ -70,7 +70,7 @@ class GPoAF(Model):
         P = TT.reshape(p, (1, S))-TT.mean(F, 0)[None, :]
         FF = TT.dot(X, F)+P
         Phi = TT.tanh(FF)*TT.sqrt(sig2_f/FF.shape[1])
-        return sig2_n, FF, Phi
+        return sig2_n, sig2_f, FF, Phi
 
 class GPoTAF(GPoAF):
     
@@ -102,10 +102,11 @@ class GPoTAF(GPoAF):
 
     def transform_inputs(self, params):
         sign = lambda x: TT.tanh(x*1e3)
+        cdf = lambda x: .5*(1+T.erf(x/T.sqrt(2+epsilon)+epsilon))
         X = TT.dmatrices('X')
         X_lm = params[-(self.D+1):-1][None, :]
         X = (sign(X)*TT.sqrt(X**2)**X_lm-1)/X_lm
-        return X
+        return cdf(X)
 
     def transform_outputs(self, params, inverse=None):
         sign = lambda x: TT.tanh(x*1e3)
@@ -166,7 +167,7 @@ class GPoCAF(GPoAF):
     def feature_maps(self, X, params):
         t_ind, S, M = 0, self.setting['nfeats'], self.setting['ncorr']
         a = params[0]; t_ind += 1; b = params[1]; t_ind += 1
-        sig2_n, sig2_f = TT.exp(2*a), TT.exp(b)
+        sig2_n, sig2_f = TT.exp(a), TT.exp(b)
         l = params[t_ind:t_ind+self.D]; t_ind += self.D
         l_f = params[t_ind:t_ind+self.D*M]; t_ind += self.D*M
         l_F = TT.reshape(l_f, (self.D, M))
@@ -177,7 +178,7 @@ class GPoCAF(GPoAF):
         P = TT.reshape(p, (1, S))-TT.mean(F, 0)[None, :]
         FF = TT.dot(X, F)+P
         Phi = TT.tanh(FF)*TT.sqrt(sig2_f/FF.shape[1])
-        return sig2_n, FF, Phi
+        return sig2_n, sig2_f, FF, Phi
             
             
             

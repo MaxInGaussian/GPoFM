@@ -6,6 +6,7 @@ Author: Max W. Y. Lam [maxingaussian@gmail.com]
 """
 
 import numpy as np
+import numpy.random as npr
 import theano
 import theano.tensor as TT
 from collections import OrderedDict
@@ -18,19 +19,18 @@ class Optimizer(object):
 
     algos = [
         "momentum",
-        "nesterov_momentum",
+        "nesterov",
         "sgd",
         "adagrad",
         "rmsprop",
         "adadelta",
         "adam",
         "adamax",
-        "norm_constraint",
-        "total_norm_constraint"
     ]
     
     @staticmethod
-    def momentum(updates, momentum=0.9):
+    def momentum(updates,
+        momentum=0.9):
         """Returns a modified update dictionary including momentum
         Generates update expressions of the form:
     *``velocity := momentum*velocity+updates[param]-param``
@@ -39,9 +39,6 @@ class Optimizer(object):
         ----------
         updates : OrderedDict
             A dictionary mapping parameters to update expressions
-        params : iterable of shared variables, optional
-            The variables to apply momentum to. If omitted, will apply
-            momentum to all `updates.keys()`.
         momentum : float or symbolic scalar, optional
             The amount of momentum to apply. Higher momentum results in
             smoothing over more update steps. Defaults to 0.9.
@@ -65,7 +62,8 @@ class Optimizer(object):
         return updates
     
     @staticmethod
-    def nesterov_momentum(updates, momentum=0.9):
+    def nesterov(updates,
+        momentum=0.9):
         """Returns a modified update dictionary including Nesterov momentum
         Generates update expressions of the form:
         *``velocity := momentum*velocity+updates[params]-params``
@@ -102,7 +100,7 @@ class Optimizer(object):
         return updates
     
     @staticmethod
-    def sgd(params, grads,
+    def sgd(updates,
         learning_rate=0.01,
         **args):
         """Stochastic Gradient Descent (SGD) updates
@@ -110,8 +108,8 @@ class Optimizer(object):
         *``params := params-learning_rate*gradient``
         Parameters
         ----------
-        params : theano shared variable
-        grads : theano symbolic variable
+        updates : OrderedDict
+            A dictionary mapping parameters to update expressions
         learning_rate : float or symbolic scalar
             The learning rate controlling the size of update steps
         Returns
@@ -119,12 +117,13 @@ class Optimizer(object):
         OrderedDict
             A dictionary mapping each parameter to its update expression
         """
-        updates = OrderedDict()
+        params, grads = list(updates.items())[0]
+        updates = OrderedDict(updates)
         updates[params] = params-learning_rate*grads
         return updates
     
     @staticmethod
-    def adagrad(params, grads,
+    def adagrad(updates,
         learning_rate=0.01,
         epsilon=1e-6,
         **args):
@@ -133,8 +132,8 @@ class Optimizer(object):
         squared gradients. See [1]_ for further description.
         Parameters
         ----------
-        params : theano shared variable
-        grads : theano symbolic variable
+        updates : OrderedDict
+            A dictionary mapping parameters to update expressions
         learning_rate : float or symbolic scalar
             The learning rate controlling the size of update steps
         epsilon : float or symbolic scalar
@@ -159,7 +158,8 @@ class Optimizer(object):
         .. [2] Chris Dyer:
             Notes on AdaGrad. http://www.ark.cs.cmu.edu/cdyer/adagrad.pdf
         """
-        updates = OrderedDict()
+        params, grads = list(updates.items())[0]
+        updates = OrderedDict(updates)
         value = params.get_value(borrow=True)
         accu = theano.shared(np.zeros(value.shape, dtype=value.dtype),
                             broadcastable=params.broadcastable)
@@ -169,7 +169,7 @@ class Optimizer(object):
         return updates
     
     @staticmethod
-    def rmsprop(params, grads,
+    def rmsprop(updates,
         learning_rate=0.01,
         rho=0.9,
         epsilon=1e-6,
@@ -179,8 +179,8 @@ class Optimizer(object):
         squared (RMS) gradients. See [1]_ for further description.
         Parameters
         ----------
-        params : theano shared variable
-        grads : theano symbolic variable
+        updates : OrderedDict
+            A dictionary mapping parameters to update expressions
         learning_rate : float or symbolic scalar
             The learning rate controlling the size of update steps
         rho : float or symbolic scalar
@@ -207,7 +207,8 @@ class Optimizer(object):
             Neural Networks for Machine Learning, Lecture 6.5-rmsprop.
             Coursera. http://www.youtube.com/watch?v=O3sxAc4hxZU (formula @5:20)
         """
-        updates = OrderedDict()
+        params, grads = list(updates.items())[0]
+        updates = OrderedDict(updates)
         one = TT.constant(1)
         value = params.get_value(borrow=True)
         accu = theano.shared(np.zeros(value.shape, dtype=value.dtype),
@@ -218,7 +219,7 @@ class Optimizer(object):
         return updates
     
     @staticmethod
-    def adadelta(params, grads,
+    def adadelta(updates,
         learning_rate=1.,
         rho=0.95,
         epsilon=1e-6,
@@ -228,8 +229,8 @@ class Optimizer(object):
         updates, see [1]_ and notes for further description.
         Parameters
         ----------
-        params : theano shared variable
-        grads : theano symbolic variable
+        updates : OrderedDict
+            A dictionary mapping parameters to update expressions
         learning_rate : float or symbolic scalar
             The learning rate controlling the size of update steps
         rho : float or symbolic scalar
@@ -264,7 +265,8 @@ class Optimizer(object):
             ADADELTA: An Adaptive Learning Rate Method.
             arXiv Preprint arXiv:1212.5701.
         """
-        updates = OrderedDict()
+        params, grads = list(updates.items())[0]
+        updates = OrderedDict(updates)
         one = TT.constant(1)
         value = params.get_value(borrow=True)
         accu = theano.shared(np.zeros(value.shape, dtype=value.dtype),
@@ -281,7 +283,7 @@ class Optimizer(object):
         return updates
     
     @staticmethod
-    def adam(params, grads,
+    def adam(updates,
         learning_rate=0.01,
         beta1=0.9,
         beta2=0.99,
@@ -291,8 +293,8 @@ class Optimizer(object):
         Adam updates implemented as in [1]_.
         Parameters
         ----------
-        params : theano shared variable
-        grads : theano symbolic variable
+        updates : OrderedDict
+            A dictionary mapping parameters to update expressions
         learning_rate : float
             Learning rate
         beta1 : float
@@ -316,8 +318,9 @@ class Optimizer(object):
             Adam: A Method for Stochastic Optimization.
             arXiv preprint arXiv:1412.6980.
         """
+        params, grads = list(updates.items())[0]
+        updates = OrderedDict(updates)
         t_prev = theano.shared(np.asarray(0., dtype=theano.config.floatX))
-        updates = OrderedDict()
         one = TT.constant(1)
         t = t_prev+1
         a_t = learning_rate*TT.sqrt(one-beta2**t)/(one-beta1**t)
@@ -336,7 +339,7 @@ class Optimizer(object):
         return updates
     
     @staticmethod
-    def adamax(params, grads,
+    def adamax(updates,
         learning_rate=0.01,
         beta1=0.9,
         beta2=0.999,
@@ -347,8 +350,8 @@ class Optimizer(object):
         algorithm based on the infinity norm.
         Parameters
         ----------
-        params : theano shared variable
-        grads : theano symbolic variable
+        updates : OrderedDict
+            A dictionary mapping parameters to update expressions
         learning_rate : float
             Learning rate
         beta1 : float
@@ -367,8 +370,9 @@ class Optimizer(object):
             Adam: A Method for Stochastic Optimization.
             arXiv preprint arXiv:1412.6980.
         """
+        params, grads = list(updates.items())[0]
+        updates = OrderedDict(updates)
         t_prev = theano.shared(np.asarray(0., dtype=theano.config.floatX))
-        updates = OrderedDict()
         one = TT.constant(1)
         t = t_prev+1
         a_t = learning_rate/(one-beta1**t)

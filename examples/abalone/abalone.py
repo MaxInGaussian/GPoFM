@@ -134,10 +134,11 @@ for i, nfeats in enumerate(nfeats_choice):
                     print("!"*80)
                     print("!"*30, "NEW BEST PREDICTOR", "!"*30)
                     print("!"*80)
-            for res in evals.keys():
-                results[res].append(model.evals[res][1][-1])
+            if(round >= reps_per_nfeats/2):
+                for res in evals.keys():
+                    results[res].append(model.evals[res][1][-1])
         for en in evals.keys():
-            eval = (np.mean(results[en]), np.std(results[en]))
+            eval = (np.mean(results[en]), 2*np.std(results[en]))
             evals[en][1][model_name].append(eval)
 
 ############################ Plot Performances ############################
@@ -150,8 +151,10 @@ for i, nfeats in enumerate(nfeats_choice):
         maxv, minv = 0, 1e5
         for model_name in metric_result.keys():
             for j in range(i+1):
-                maxv = max(maxv, metric_result[model_name][j][0])
-                minv = min(minv, metric_result[model_name][j][0])
+                maxv = max(maxv, metric_result[model_name][j][0]+\
+                    metric_result[model_name][j][1])
+                minv = min(minv, metric_result[model_name][j][0]-\
+                    metric_result[model_name][j][1])
                 ax.text(nfeats_choice[j], metric_result[model_name][j][0],
                     '%.2f'%(metric_result[model_name][j][0]), fontsize=5)
             line = ax.errorbar(nfeats_choice[:i+1],
@@ -162,7 +165,7 @@ for i, nfeats in enumerate(nfeats_choice):
         ax.set_ylim([minv-(maxv-minv)*0.15,maxv+(maxv-minv)*0.45])
         plt.title(metric_name, fontsize=18)
         handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles, labels, loc='upper left', ncol=2, fancybox=True)
+        ax.legend(handles, labels, loc='upper left', ncol=3, fancybox=True)
         plt.xlabel('Number of Features', fontsize=13)
         plt.ylabel(en, fontsize=13)
         plt.savefig('plots/'+en.lower()+'_penalty=%.2f'%(penalty)+'.png')

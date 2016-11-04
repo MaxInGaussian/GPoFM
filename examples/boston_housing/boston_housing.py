@@ -14,22 +14,21 @@ from GPoFM import *
 
 BEST_MODEL_PATH = 'boston.pkl'
 
+
 ############################ Prior Setting ############################
-use_models = ['GPoFF', 'GPoTFF', 'GPoCFF',
-              'GPoHF', 'GPoTHF', 'GPoCHF',
-              'GPoAF', 'GPoTAF', 'GPoCAF']
+use_models = ['GPoTFF', 'GPoTAF']
 num = 5
-reps_per_nfeats = 10
-penalty = 1
+reps = 20
+penalty = 1.
 nfeats_range = [10, num*10]
 nfeats_length = nfeats_range[1]-nfeats_range[0]
 nfeats_choice = [nfeats_range[0]+(i*nfeats_length)//(num-1) for i in range(num)]
 plot_metric = 'mse'
-select_params_metric = 'score'
+select_params_metric = 'nmse'
 select_model_metric = 'score'
+fig = plt.figure(figsize=(8, 6), facecolor='white')
 visualizer = None
-# fig = plt.figure(figsize=(8, 6), facecolor='white')
-# visualizer = Visualizer(fig, plot_metric)
+visualizer = Visualizer(fig, plot_metric)
 algo = {
     'algo': 'adam',
     'algo_params': {
@@ -42,7 +41,7 @@ algo = {
 opt_params = {
     'obj': select_params_metric,
     'algo': algo,
-    'cv_nfolds': 5,
+    'cv_nfolds': 4,
     'cvrg_tol': 1e-5,
     'max_cvrg': 8,
     'max_iter': 200
@@ -109,20 +108,18 @@ for i, nfeats in enumerate(nfeats_choice):
         ModelClass = getattr(sys.modules['GPoFM'], model_name)
         funcs = None
         results = {en:[] for en in evals.keys()}
-        for round in range(reps_per_nfeats):
+        for round in range(reps):
             model = GPoFM(ModelClass(nfeats=nfeats, penalty=penalty))
+            model.optimize(X_train, y_train, funcs, visualizer, **opt_params)
             if(funcs is None):
-                model.fit(X_train, y_train, None, visualizer, **opt_params)
                 funcs = model.get_compiled_funcs()
-            else:
-                model.fit(X_train, y_train, funcs, visualizer, **opt_params)
             if(not os.path.exists(BEST_MODEL_PATH)):
                 model.save(BEST_MODEL_PATH)
             else:
                 best_model = GPoFM(Model().load(BEST_MODEL_PATH))
-                best_model.set_training_data(X_train, y_train)
-                best_model.evaluate(X_test, y_test)
-                model.evaluate(X_test, y_test)
+                best_model.fit(X_train, y_train)
+                best_model.score(X_test, y_test)
+                model.score(X_test, y_test)
                 best_model._print_evals_comparison(model.evals)
                 if(model.evals[select_model_metric][1][-1] <
                     best_model.evals[select_model_metric][1][-1]):
@@ -130,36 +127,37 @@ for i, nfeats in enumerate(nfeats_choice):
                     print("!"*80)
                     print("!"*30, "NEW BEST PREDICTOR", "!"*30)
                     print("!"*80)
-            for res in evals.keys():
-                results[res].append(model.evals[res][1][-1])
+            if(round >= reps//2):
+                for res in evals.keys():
+                    results[res].append(model.evals[res][1][-1])
         for en in evals.keys():
             eval = (np.mean(results[en]), np.std(results[en]))
             evals[en][1][model_name].append(eval)
-
 
 ############################ Plot Performances ############################
     import os
     if not os.path.exists('plots'):
         os.mkdir('plots')
+    ax = fig.add_subplot(111)
     for en, (metric_name, metric_result) in evals.items():
-        f = plt.figure(figsize=(8, 6), facecolor='white', dpi=120)
-        ax = f.add_subplot(111)
         maxv, minv = 0, 1e5
         for model_name in metric_result.keys():
             for j in range(i+1):
-                maxv = max(maxv, metric_result[model_name][j][0])
-                minv = min(minv, metric_result[model_name][j][0])
-                ax.text(nfeats_choice[j], metric_result[model_name][j][0],
-                    '%.2f'%(metric_result[model_name][j][0]), fontsize=5)
+                maxv = max(maxv, metric_result[model_name][j][0]+\
+                    metric_result[model_name][j][1])
+                minv = min(minv, metric_result[model_name][j][0]-\
+                    metric_result[model_name][j][1])
             line = ax.errorbar(nfeats_choice[:i+1],
                 [metric_result[model_name][j][0] for j in range(i+1)],
                 yerr=[metric_result[model_name][j][1] for j in range(i+1)],
-                fmt='-o', label=model_name)
+                fmt='o', capsize=6, label=model_name, alpha=0.6)
         ax.set_xlim([min(nfeats_choice)-10, max(nfeats_choice)+10])
-        ax.set_ylim([minv-(maxv-minv)*0.15,maxv+(maxv-minv)*0.45])
+        ax.set_ylim([minv-(maxv-minv)*0.2,maxv+(maxv-minv)*0.2])
+        ax.grid(True)
         plt.title(metric_name, fontsize=18)
         handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles, labels, loc='upper left', ncol=2, fancybox=True)
+        ax.legend(handles, labels, loc='upper right', ncol=3, fancybox=True)
         plt.xlabel('Number of Features', fontsize=13)
         plt.ylabel(en, fontsize=13)
-        plt.savefig('plots/'+en.lower()+'_penalty=%.2f'%(penalty)+'.png')
+        plt.savefig('plots/'+en.lower()+'.png')
+        ax.cla()

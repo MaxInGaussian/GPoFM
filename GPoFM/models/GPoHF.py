@@ -73,7 +73,7 @@ class GPoHF(Model):
         P = TT.reshape(p, (1, S))-TT.mean(F, 0)[None, :]
         FF = TT.dot(X, F)+P
         Phi = TT.cos(FF)*TT.exp(X.dot(G))*TT.sqrt(sig2_f/FF.shape[1])
-        return sig2_n, FF, Phi
+        return sig2_n, sig2_f, FF, Phi
 
 class GPoTHF(GPoHF):
     
@@ -105,10 +105,11 @@ class GPoTHF(GPoHF):
 
     def transform_inputs(self, params):
         sign = lambda x: TT.tanh(x*1e3)
+        cdf = lambda x: .5*(1+T.erf(x/T.sqrt(2+epsilon)+epsilon))
         X = TT.dmatrices('X')
         X_lm = params[-(self.D+1):-1][None, :]
         X = (sign(X)*TT.sqrt(X**2)**X_lm-1)/X_lm
-        return X
+        return cdf(X)
 
     def transform_outputs(self, params, inverse=None):
         sign = lambda x: TT.tanh(x*1e3)
@@ -187,4 +188,4 @@ class GPoCHF(GPoHF):
         P = TT.reshape(p, (1, S))-TT.mean(F, 0)[None, :]
         FF = TT.dot(X, F)+P
         Phi = TT.cos(FF)*TT.exp(X.dot(G))*TT.sqrt(sig2_f/FF.shape[1])
-        return sig2_n, FF, Phi
+        return sig2_n, sig2_f, FF, Phi
