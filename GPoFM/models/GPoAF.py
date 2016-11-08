@@ -67,7 +67,7 @@ class GPoAF(Model):
         p = params[t_ind:t_ind+S]; t_ind += S
         P = TT.reshape(p, (1, S))-TT.mean(F, 0)[None, :]
         FF = TT.dot(X, F)+P
-        Phi = FF/(1+abs(FF))*TT.sqrt(sig2_f/FF.shape[1])
+        Phi = TT.tanh(FF)*TT.sqrt(sig2_f/FF.shape[1])
         if(type(X) == TT.TensorVariable):
             return sig2_n, sig2_f, FF, Phi
         return Phi

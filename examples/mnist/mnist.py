@@ -16,8 +16,8 @@ BEST_MODEL_PATH = 'mnist.pkl'
 
 
 ############################ Prior Setting ############################
-use_models = ['GPoTAF']
-reps = 20
+use_models = ['GPoFF', 'GPoAF', 'GPoHF']
+reps = 1
 penalty = 1.
 feats_num = 5
 feats_base = 10
@@ -42,7 +42,7 @@ algo = {
 opt_params = {
     'obj': select_params_metric,
     'algo': algo,
-    'cv_nfolds': 2,
+    'cv_nfolds': 4,
     'cvrg_tol': 1e-5,
     'max_cvrg': 8,
     'max_iter': 200
@@ -103,7 +103,7 @@ def plot_dist(*args):
         sns.distplot(x)
     plt.show()
 
-def load_data(prop=0.8):
+def load_data(prop=.8):
     from sklearn import datasets
     digits = datasets.load_digits()
     X = digits.data
@@ -132,6 +132,7 @@ for i, nfeats in enumerate(nfeats_choice):
                 funcs = model.get_compiled_funcs()
             if(not os.path.exists(BEST_MODEL_PATH)):
                 model.save(BEST_MODEL_PATH)
+                visualizer.train_plot()(-1)
             else:
                 best_model = GPoFM(Model().load(BEST_MODEL_PATH))
                 best_model.fit(X_train, y_train)
@@ -140,6 +141,7 @@ for i, nfeats in enumerate(nfeats_choice):
                 best_model._print_evals_comparison(model.evals)
                 if(model.evals[select_model_metric][1][-1] <
                     best_model.evals[select_model_metric][1][-1]):
+                    visualizer.train_plot()(-1)
                     model.save(BEST_MODEL_PATH)
                     print("!"*80)
                     print("!"*30, "NEW BEST PREDICTOR", "!"*30)

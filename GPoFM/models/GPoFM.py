@@ -77,7 +77,7 @@ class Model(object):
         nfeats = 50 if 'nfeats' not in args.keys() else args['nfeats']
         penalty = 1e-1 if 'penalty' not in args.keys() else args['penalty']
         Xt = 'min-max' if 'X_trans' not in args.keys() else args['X_trans']
-        yt = 'normal' if 'y_trans' not in args.keys() else args['y_trans']
+        yt = 'min-max' if 'y_trans' not in args.keys() else args['y_trans']
         verbose = False if 'verbose' not in args.keys() else args['verbose']
         self.trans = {'X': Transformer(Xt), 'y': Transformer(yt)}
         self.verbose = verbose
@@ -326,7 +326,6 @@ class Model(object):
                 self.params = (1-randp)*self.params+randp*argmin_params
         self.params = argmin_params.copy()
         self.cross_validate(X, y, cv_nfolds)
-        animate(-1)
         self.evals_ind = -1
         verbose = self.verbose
         self.verbose = True

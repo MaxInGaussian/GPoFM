@@ -49,13 +49,15 @@ class Visualizer(object):
             ax2 = self.fig.add_subplot(212)
             ax1.set_title('MDS', fontsize=15)
             ax2.set_title(self.model.__str__()+' + MDS', fontsize=15)
-            Xs = self.model.Xs
-            ys = self.model.ys
-            Phi = self.model.feature_maps(Ts(Xs), self.model.params).eval()
+            Xt, yt = self.model.Xt, self.model.yt
+            Xs, ys = self.model.Xs, self.model.ys
             _X_mds = MDS(n_components=2).fit_transform(Xs)
             mds_min, mds_max = np.min(_X_mds, 0), np.max(_X_mds, 0)
             _X_mds = (_X_mds-mds_min)/(mds_max-mds_min)
-            X_mds = MDS(n_components=2).fit_transform(Phi)
+            Phis = self.model.feature_maps(Ts(Xs), self.model.params).eval()
+            alpha = self.model.trained_mats['alpha']
+            Phis = np.hstack((Phis, Phis.dot(alpha)))
+            X_mds = MDS(n_components=2).fit_transform(Phis)
             mds_min, mds_max = np.min(X_mds, 0), np.max(X_mds, 0)
             X_mds = (X_mds-mds_min)/(mds_max-mds_min)
             for i in range(Xs.shape[0]):
@@ -76,7 +78,7 @@ class Visualizer(object):
                 import os
                 if not os.path.exists('plots'):
                     os.mkdir('plots')
-                plt.savefig('plots/embedding.png')
+                plt.savefig('plots/'+self.model.__class__.__name__+'.png')
         return animate
     
     def train_plot(self):
