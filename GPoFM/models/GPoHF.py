@@ -100,7 +100,7 @@ class GPoTHF(GPoHF):
         super(GPoTHF, self).__init__(**args)
     
     def __str__(self):
-        return "GPoTHF (Fourier = %d)"%(self.setting['nfeats'])
+        return "GPoTHF (Homogeneous = %d)"%(self.setting['nfeats'])
 
     def transform_inputs(self, params):
         sign = lambda x: TT.tanh(x*1e3)

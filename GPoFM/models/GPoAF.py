@@ -98,7 +98,7 @@ class GPoTAF(GPoAF):
         super(GPoTAF, self).__init__(**args)
     
     def __str__(self):
-        return "GPoTAF (Fourier = %d)"%(self.setting['nfeats'])
+        return "GPoTAF (Activation = %d)"%(self.setting['nfeats'])
 
     def transform_inputs(self, params):
         sign = lambda x: TT.tanh(x*1e3)
