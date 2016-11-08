@@ -83,6 +83,19 @@ evals = {
 }
         
 ############################ General Methods ############################
+def debug(local):
+    locals().update(local)
+    print('Debug Commands:')
+    while True:
+        cmd = input('>>> ')
+        if(cmd == ''):
+            break
+        try:
+            exec(cmd)
+        except Exception as e:
+            import traceback
+            traceback.print_tb(e.__traceback__)
+    
 def plot_dist(*args):
     import seaborn as sns
     for x in args:
@@ -141,9 +154,9 @@ for i, nfeats in enumerate(nfeats_choice):
     import os
     if not os.path.exists('plots'):
         os.mkdir('plots')
+    fig.clf()
+    ax = fig.add_subplot(111)
     for en, (metric_name, metric_result) in evals.items():
-        f = plt.figure(figsize=(8, 6), facecolor='white', dpi=120)
-        ax = f.add_subplot(111)
         maxv, minv = 0, 1e5
         for model_name in metric_result.keys():
             for j in range(i+1):
@@ -151,17 +164,17 @@ for i, nfeats in enumerate(nfeats_choice):
                     metric_result[model_name][j][1])
                 minv = min(minv, metric_result[model_name][j][0]-\
                     metric_result[model_name][j][1])
-                ax.text(nfeats_choice[j], metric_result[model_name][j][0],
-                    '%.2f'%(metric_result[model_name][j][0]), fontsize=5)
             line = ax.errorbar(nfeats_choice[:i+1],
                 [metric_result[model_name][j][0] for j in range(i+1)],
                 yerr=[metric_result[model_name][j][1] for j in range(i+1)],
-                fmt='-o', label=model_name)
+                fmt='o', capsize=6, label=model_name, alpha=0.6)
         ax.set_xlim([min(nfeats_choice)-10, max(nfeats_choice)+10])
-        ax.set_ylim([minv-(maxv-minv)*0.15,maxv+(maxv-minv)*0.45])
+        ax.set_ylim([minv-(maxv-minv)*0.2,maxv+(maxv-minv)*0.2])
+        ax.grid(True)
         plt.title(metric_name, fontsize=18)
         handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles, labels, loc='upper left', ncol=3, fancybox=True)
+        ax.legend(handles, labels, loc='upper right', ncol=3, fancybox=True)
         plt.xlabel('Number of Features', fontsize=13)
         plt.ylabel(en, fontsize=13)
-        plt.savefig('plots/'+en.lower()+'_penalty=%.2f'%(penalty)+'.png')
+        plt.savefig('plots/'+en.lower()+'.png')
+        ax.cla()

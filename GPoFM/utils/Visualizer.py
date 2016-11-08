@@ -7,16 +7,29 @@ Author: Max W. Y. Lam [maxingaussian@gmail.com]
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import offsetbox
+from scipy.interpolate import griddata
 
 from theano import shared as Ts, function as Tf, tensor as TT
 from theano.sandbox import linalg as Tlin
-
-from .. import __init__
 
 __all__ = [
     "Visualizer",
 ]
 
+def debug(local):
+    locals().update(local)
+    print('Debug Commands:')
+    while True:
+        cmd = input('>>> ')
+        if(cmd == ''):
+            break
+        try:
+            exec(cmd)
+        except Exception as e:
+            import traceback
+            traceback.print_tb(e.__traceback__)
+        
 class Visualizer(object):
     
     " Visualizer (Data Visualization) "
@@ -29,43 +42,62 @@ class Visualizer(object):
         self.plot_limit = plot_limit
 
     def similarity_plot(self):
-        from sklearn.decomposition import PCA
-        self.fig.suptitle(self.model.__str__(), fontsize=15)
-        ax = self.fig.add_subplot(111)
-        def animate(i):
-            ax.cla()
-            pts = 100
-            Xs = Ts(np.tile(np.linspace(0., 1., pts), (self.model.D, 1)).T)
-            Phi = self.model.feature_maps(Xs, self.model.params)[-1].eval()
-            pca = PCA(n_components=2)
-            X_r = pca.fit(Phi).transform(Phi)
-            ax.contourf(X_r[:, 0], X_r[:, 1], self.model.yt.ravel())
-            # surf = ax.plot_surface(X, Y, Z, rstride=5, cstride=5, cmap=cm.jet,
-            #                     linewidth=1, antialiased=True)
-            # 
-            # ax.set_zlim3d(np.min(Z), np.max(Z))
-            # fig.colorbar(surf)
-            ax.colorbar()
+        from sklearn.manifold import MDS
+        def animate(iter):
+            self.fig.clf()
+            ax1 = self.fig.add_subplot(211)
+            ax2 = self.fig.add_subplot(212)
+            ax1.set_title('MDS', fontsize=15)
+            ax2.set_title(self.model.__str__()+' + MDS', fontsize=15)
+            Xs = self.model.Xs
+            ys = self.model.ys
+            Phi = self.model.feature_maps(Ts(Xs), self.model.params).eval()
+            _X_mds = MDS(n_components=2).fit_transform(Xs)
+            mds_min, mds_max = np.min(_X_mds, 0), np.max(_X_mds, 0)
+            _X_mds = (_X_mds-mds_min)/(mds_max-mds_min)
+            X_mds = MDS(n_components=2).fit_transform(Phi)
+            mds_min, mds_max = np.min(X_mds, 0), np.max(X_mds, 0)
+            X_mds = (X_mds-mds_min)/(mds_max-mds_min)
+            for i in range(Xs.shape[0]):
+                target = np.argmax(ys[i])
+                ax1.text(_X_mds[i, 0], _X_mds[i, 1], str(target),
+                    color=plt.cm.Set1(target/ys.shape[1]),
+                    fontdict={'weight': 'bold', 'size': 11})
+                ax2.text(X_mds[i, 0], X_mds[i, 1], str(target),
+                    color=plt.cm.Set1(target/ys.shape[1]),
+                    fontdict={'weight': 'bold', 'size': 11})
+            ax1.set_xticks([]), ax1.set_yticks([])
+            ax2.set_xticks([]), ax2.set_yticks([])
+            ax1.set_ylim([-0.1, 1.1]); ax1.set_xlim([-0.1, 1.1])
+            ax2.set_ylim([-0.1, 1.1]); ax2.set_xlim([-0.1, 1.1])
+            self.fig.tight_layout()
+            plt.pause(0.2)
+            if(iter == -1):
+                import os
+                if not os.path.exists('plots'):
+                    os.mkdir('plots')
+                plt.savefig('plots/embedding.png')
         return animate
-            
+    
     def train_plot(self):
+        if(self.model.yt.shape[1] > 1):
+            return self.similarity_plot()
         if(self.model.D == 1):
             return self.train_1d_plot()
-        else:
-            return self.train_eval_plot()
+        return self.train_eval_plot()
     
     def train_1d_plot(self):
-        self.fig.suptitle(self.model.__str__(), fontsize=15)
-        ax = self.fig.add_subplot(111)
-        def animate(i):
-            ax.cla()
+        def animate(iter):
+            self.fig.clf()
+            self.fig.suptitle(self.model.__str__(), fontsize=15)
+            ax = self.fig.add_subplot(111)
             pts = 300
             errors = [0.25, 0.39, 0.52, 0.67, 0.84, 1.04, 1.28, 1.64, 2.2]
             Xs = np.linspace(0., 1., pts)[:, None]
-            pred_inputs = self.model.pack_train_func_inputs(Xs)
+            pred_inputs = self.model.pack_pred_func_inputs(Xs)
             predicted_mats = self.model.compiled_funcs['pred'](*pred_inputs)
             predicted_mats = self.model.unpack_predicted_mats(predicted_mats)
-            mu, std = predicted_mats['mu_f'], predicted_mats['std_f']
+            mu, std = predicted_mats['mu_fs'], predicted_mats['std_fs']
             for er in errors:
                 ax.fill_between(Xs[:, 0], mu-er*std, mu+er*std,
                                 alpha=((3-er)/5.5)**1.7, facecolor='blue',
@@ -76,6 +108,7 @@ class Visualizer(object):
             yrng = self.model.yt.max()-self.model.yt.min()
             ax.set_ylim([self.model.yt.min(), self.model.yt.max()+0.5*yrng])
             ax.set_xlim([-0.1, 1.1])
+            plt.pause(0.1)
         return animate
     
     def train_eval_plot(self):
@@ -83,8 +116,8 @@ class Visualizer(object):
         ax1 = self.fig.add_subplot(211)
         ax2 = self.fig.add_subplot(212)
         plt.xlabel('TIME(s)', fontsize=13)
-        def animate(i):
-            if(i == 0):
+        def animate(iter):
+            if(iter == 0):
                 data_x1, data_y1, data_x2, data_y2 = [], [], [], []
             else:
                 data_x1 = ax1.lines[0].get_xdata().tolist()
@@ -109,4 +142,5 @@ class Visualizer(object):
             handles, labels = ax2.get_legend_handles_labels()
             ax2.legend(handles, labels, loc='upper center',
                 bbox_to_anchor=(0.5, 1.05), ncol=1, fancybox=True)
+            plt.pause(0.01)
         return animate

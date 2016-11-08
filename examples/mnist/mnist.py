@@ -12,23 +12,24 @@ import matplotlib.pyplot as plt
 
 from GPoFM import *
 
-BEST_MODEL_PATH = 'boston.pkl'
+BEST_MODEL_PATH = 'mnist.pkl'
 
 
 ############################ Prior Setting ############################
 use_models = ['GPoTAF']
-num = 5
 reps = 20
 penalty = 1.
-nfeats_range = [10, num*10]
+feats_num = 5
+feats_base = 10
+nfeats_range = [feats_base, feats_num*feats_base]
 nfeats_length = nfeats_range[1]-nfeats_range[0]
-nfeats_choice = [nfeats_range[0]+(i*nfeats_length)//(num-1) for i in range(num)]
+nfeats_choice = [nfeats_range[0]+(i*nfeats_length)//(feats_num-1)
+    for i in range(feats_num)]
 plot_metric = 'mse'
 select_params_metric = 'nmse'
 select_model_metric = 'score'
-fig = plt.figure(figsize=(8, 6), facecolor='white')
 visualizer = None
-visualizer = Visualizer(fig, plot_metric)
+visualizer = Visualizer(plt.figure(facecolor='white', dpi=120), plot_metric)
 algo = {
     'algo': 'adam',
     'algo_params': {
@@ -41,7 +42,7 @@ algo = {
 opt_params = {
     'obj': select_params_metric,
     'algo': algo,
-    'cv_nfolds': 4,
+    'cv_nfolds': 2,
     'cvrg_tol': 1e-5,
     'max_cvrg': 8,
     'max_iter': 200
@@ -102,11 +103,14 @@ def plot_dist(*args):
         sns.distplot(x)
     plt.show()
 
-def load_data(prop=400./506):
+def load_data(prop=0.8):
     from sklearn import datasets
-    boston = datasets.load_boston()
-    X, y = boston.data, boston.target
-    y = y[:, None]
+    digits = datasets.load_digits()
+    X = digits.data
+    ty = digits.target[:, None]
+    lbls = np.sort(np.unique(ty))
+    y = np.zeros((ty.shape[0], lbls.shape[0]))
+    y[np.arange(ty.shape[0]), np.where(ty==lbls)[1]] = 1
     ntrain = y.shape[0]
     train_inds = npr.choice(range(ntrain), int(prop*ntrain), replace=False)
     test_inds = np.setdiff1d(range(ntrain), train_inds)

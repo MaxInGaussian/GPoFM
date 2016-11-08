@@ -8,17 +8,29 @@ Author: Max W. Y. Lam [maxingaussian@gmail.com]
 import sys, os, string, time
 import numpy as np
 import numpy.random as npr
-import matplotlib.pyplot as plt
 
 from theano import shared as Ts, function as Tf, tensor as TT
 from theano.sandbox import linalg as Tlin
 
-from .. import *
+from .. import Optimizer, Transformer, Visualizer
 
 __all__ = [
     'GPoFM',
     'Model',
 ]
+
+def debug(local):
+    locals().update(local)
+    print('Debug Commands:')
+    while True:
+        cmd = input('>>> ')
+        if(cmd == ''):
+            break
+        try:
+            exec(cmd)
+        except Exception as e:
+            import traceback
+            traceback.print_tb(e.__traceback__)
 
 class GPoFM(object):
     
@@ -92,7 +104,10 @@ class Model(object):
     def randomized_params(self):
         raise NotImplementedError
     
-    def feature_maps(self, params):
+    def feature_maps(self, X, params):
+        raise NotImplementedError
+    
+    def inv_feature_maps(self, Phi, params):
         raise NotImplementedError
     
     def unpack_trained_mats(self, trained_mats):
@@ -214,6 +229,7 @@ class Model(object):
             givens=[(params, self.params)])
 
     def score(self, X, y):
+        self.Xs, self.ys = X.copy(), y.copy()
         mu, std = self.predict(X)
         mae = np.mean(np.abs(mu-y))
         self.evals['mae'][1].append(mae)
@@ -279,7 +295,7 @@ class Model(object):
             self.compiled_funcs = funcs
         if(visualizer is not None):
             visualizer.model = self
-            animate = visualizer.similarity_plot()
+            animate = visualizer.train_plot()
         self.evals_ind = 0
         self.train_start_time = time.time()
         min_obj, min_obj_val = np.Infinity, np.Infinity
@@ -291,7 +307,6 @@ class Model(object):
                 self._print_current_evals()
             if(visualizer is not None):
                 animate(iter)
-                plt.pause(0.2)
             obj_val = self.evals[obj_type][1][-1]
             if(obj_val < min_obj_val):
                 if(min_obj_val-obj_val < cvrg_tol):
@@ -311,6 +326,7 @@ class Model(object):
                 self.params = (1-randp)*self.params+randp*argmin_params
         self.params = argmin_params.copy()
         self.cross_validate(X, y, cv_nfolds)
+        animate(-1)
         self.evals_ind = -1
         verbose = self.verbose
         self.verbose = True

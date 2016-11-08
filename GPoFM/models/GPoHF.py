@@ -12,14 +12,11 @@ import matplotlib.pyplot as plt
 from theano import tensor as TT
 
 from . import Model
-from .. import Optimizer
 
 __all__ = [
     "GPoHF",
     "GPoTHF",
-    "GPoCHF",
 ]
-
 
 class GPoHF(Model):
     
@@ -73,7 +70,9 @@ class GPoHF(Model):
         P = TT.reshape(p, (1, S))-TT.mean(F, 0)[None, :]
         FF = TT.dot(X, F)+P
         Phi = TT.cos(FF)*TT.exp(X.dot(G))*TT.sqrt(sig2_f/FF.shape[1])
-        return sig2_n, sig2_f, FF, Phi
+        if(type(X) == TT.TensorVariable):
+            return sig2_n, sig2_f, FF, Phi
+        return Phi
 
 class GPoTHF(GPoHF):
     
@@ -125,67 +124,3 @@ class GPoTHF(GPoHF):
     def randomized_params(self):
         lm = 2*np.pi*npr.rand(self.D+1)
         return super(GPoTHF, self).randomized_params()+[lm]
-
-class GPoCHF(GPoHF):
-    
-    '''
-    The :class:`GPoCHF` class implemented a GPoFM model:
-        Gaussian process Optimizing Correlated Homogeneous Feature Maps (GPoCHF)
-    
-    Parameters
-    ----------
-    ncorr : an integer
-        Number of correlated Homogeneous features
-    nfeats : an integer
-        Number of Homogeneous Features (nfeats > ncorr)
-    penalty : a float
-        Penalty for too complex function. default: 1.
-    X_trans : a string
-        Transformation method used for inputs of training data
-    y_trans : a string
-        Transformation method used for outpus of training data
-    verbose : a bool
-        Idicator that determines whether printing training message or not
-    '''
-    
-    setting, compiled_funcs = None, None
-    
-    def __init__(self, ncorr=10, **args):
-        super(GPoCHF, self).__init__(**args)
-        self.setting['ncorr'] = ncorr
-    
-    def __str__(self):
-        S, M = self.setting['nfeats'], self.setting['ncorr']
-        return "GPoCHF (Homogeneous = %d, Corr. Homogeneous = %d)"%(S, M)
-
-    def randomized_params(self):
-        S, M = self.setting['nfeats'], self.setting['ncorr']
-        const = npr.randn(2)*1e-2
-        l = npr.randn(self.D)
-        l_g = npr.randn(self.D*M)
-        r_g = npr.randn(M*S)
-        l_f = npr.randn(self.D*M)
-        r_f = npr.rand(M*S)
-        p = 2*np.pi*npr.rand(S)
-        return [const, l, l_g, r_g, l_f, r_f, p]
-    
-    def feature_maps(self, X, params):
-        t_ind, S, M = 0, self.setting['nfeats'], self.setting['ncorr']
-        a = params[0]; t_ind+=1; b = params[1]; t_ind+=1
-        sig2_n, sig2_f = TT.exp(2*a), TT.exp(b)
-        l = params[t_ind:t_ind+self.D];t_ind+=self.D
-        l_g = params[t_ind:t_ind+self.D*M];t_ind+=self.D*M
-        l_G = TT.reshape(l_g, (self.D, M))
-        r_g = params[t_ind:t_ind+M*S];t_ind+=M*S
-        r_G = TT.reshape(r_g, (S, M))/M
-        G = l_G.dot(r_G.T)/np.exp(l[:, None])
-        l_f = params[t_ind:t_ind+self.D*M];t_ind+=self.D*M
-        l_F = TT.reshape(l_f, (self.D, M))
-        r_f = params[t_ind:t_ind+M*S];t_ind+=M*S
-        r_F = TT.reshape(r_f, (S, M))/M
-        F = l_F.dot(r_F.T)/np.exp(l[:, None])
-        p = params[t_ind:t_ind+S];t_ind+=S
-        P = TT.reshape(p, (1, S))-TT.mean(F, 0)[None, :]
-        FF = TT.dot(X, F)+P
-        Phi = TT.cos(FF)*TT.exp(X.dot(G))*TT.sqrt(sig2_f/FF.shape[1])
-        return sig2_n, sig2_f, FF, Phi
