@@ -28,8 +28,9 @@ nfeats_choice = [nfeats_range[0]+(i*nfeats_length)//(feats_num-1)
 plot_metric = 'mse'
 select_params_metric = 'nmse'
 select_model_metric = 'score'
+fig = plt.figure(facecolor='white', dpi=120)
 visualizer = None
-visualizer = Visualizer(plt.figure(facecolor='white', dpi=120), plot_metric)
+visualizer = Visualizer(fig, plot_metric)
 algo = {
     'algo': 'adam',
     'algo_params': {
