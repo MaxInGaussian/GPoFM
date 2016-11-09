@@ -15,17 +15,17 @@ from GPoFM import *
 BEST_MODEL_PATH = 'abalone.pkl'
 
 ############################ Prior Setting ############################
-use_models = ['GPoFF', 'GPoAF', 'GPoHF']
-reps = 1
+use_models = ['GPoFF', 'GPoAF']
+reps = 50
 penalty = 1.
 feats_num = 5
-feats_base = 10
+feats_base = 25
 nfeats_range = [feats_base, feats_num*feats_base]
 nfeats_length = nfeats_range[1]-nfeats_range[0]
 nfeats_choice = [nfeats_range[0]+(i*nfeats_length)//(feats_num-1)
     for i in range(feats_num)]
 plot_metric = 'mse'
-select_params_metric = 'score'
+select_params_metric = 'nmse'
 select_model_metric = 'score'
 visualizer = None
 # fig = plt.figure(figsize=(8, 6), facecolor='white')
@@ -126,20 +126,18 @@ for i, nfeats in enumerate(nfeats_choice):
         ModelClass = getattr(sys.modules['GPoFM'], model_name)
         funcs = None
         results = {en:[] for en in evals.keys()}
-        for round in range(reps_per_nfeats):
+        for round in range(reps):
             model = GPoFM(ModelClass(nfeats=nfeats, penalty=penalty))
+            model.optimize(X_train, y_train, funcs, visualizer, **opt_params)
             if(funcs is None):
-                model.fit(X_train, y_train, None, visualizer, **opt_params)
                 funcs = model.get_compiled_funcs()
-            else:
-                model.fit(X_train, y_train, funcs, visualizer, **opt_params)
             if(not os.path.exists(BEST_MODEL_PATH)):
                 model.save(BEST_MODEL_PATH)
             else:
                 best_model = GPoFM(Model().load(BEST_MODEL_PATH))
-                best_model.set_training_data(X_train, y_train)
-                best_model.evaluate(X_test, y_test)
-                model.evaluate(X_test, y_test)
+                best_model.fit(X_train, y_train)
+                best_model.score(X_test, y_test)
+                model.score(X_test, y_test)
                 best_model._print_evals_comparison(model.evals)
                 if(model.evals[select_model_metric][1][-1] <
                     best_model.evals[select_model_metric][1][-1]):
@@ -147,18 +145,18 @@ for i, nfeats in enumerate(nfeats_choice):
                     print("!"*80)
                     print("!"*30, "NEW BEST PREDICTOR", "!"*30)
                     print("!"*80)
-            if(round >= reps_per_nfeats/2):
+            if(round >= reps//2):
                 for res in evals.keys():
                     results[res].append(model.evals[res][1][-1])
         for en in evals.keys():
-            eval = (np.mean(results[en]), 2*np.std(results[en]))
+            eval = (np.mean(results[en]), np.std(results[en]))
             evals[en][1][model_name].append(eval)
 
 ############################ Plot Performances ############################
     import os
     if not os.path.exists('plots'):
         os.mkdir('plots')
-    fig.clf()
+    fig = plt.figure(facecolor='white', dpi=120)
     ax = fig.add_subplot(111)
     for en, (metric_name, metric_result) in evals.items():
         maxv, minv = 0, 1e5

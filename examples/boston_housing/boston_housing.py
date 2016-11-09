@@ -14,9 +14,8 @@ from GPoFM import *
 
 BEST_MODEL_PATH = 'boston.pkl'
 
-
 ############################ Prior Setting ############################
-use_models = ['GPoFF', 'GPoAF', 'GPoHF']
+use_models = ['GPoFF', 'GPoAF']
 reps = 50
 penalty = 1.
 feats_num = 5
@@ -28,9 +27,9 @@ nfeats_choice = [nfeats_range[0]+(i*nfeats_length)//(feats_num-1)
 plot_metric = 'mse'
 select_params_metric = 'nmse'
 select_model_metric = 'score'
-fig = plt.figure(figsize=(8, 6), facecolor='white')
 visualizer = None
-visualizer = Visualizer(fig, plot_metric)
+# fig = plt.figure(figsize=(8, 6), facecolor='white')
+# visualizer = Visualizer(fig, plot_metric)
 algo = {
     'algo': 'adam',
     'algo_params': {
