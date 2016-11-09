@@ -158,7 +158,7 @@ for i, nfeats in enumerate(nfeats_choice):
     import os
     if not os.path.exists('plots'):
         os.mkdir('plots')
-    fig.clf()
+    fig = plt.figure(facecolor='white', dpi=120)
     ax = fig.add_subplot(111)
     for en, (metric_name, metric_result) in evals.items():
         maxv, minv = 0, 1e5

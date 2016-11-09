@@ -15,15 +15,15 @@ from GPoFM import *
 BEST_MODEL_PATH = 'kin8nm.pkl'
 
 ############################ Prior Setting ############################
-use_models = ['GPoFF', 'GPoTFF', 'GPoCFF',
-              'GPoHF', 'GPoTHF', 'GPoCHF',
-              'GPoAF', 'GPoTAF', 'GPoCAF']
-num = 6
-reps_per_nfeats = 20
-penalty = 1
-nfeats_range = [10, num*10]
+use_models = ['GPoFF', 'GPoAF', 'GPoHF']
+reps = 1
+penalty = 1.
+feats_num = 5
+feats_base = 10
+nfeats_range = [feats_base, feats_num*feats_base]
 nfeats_length = nfeats_range[1]-nfeats_range[0]
-nfeats_choice = [nfeats_range[0]+(i*nfeats_length)//(num-1) for i in range(num)]
+nfeats_choice = [nfeats_range[0]+(i*nfeats_length)//(feats_num-1)
+    for i in range(feats_num)]
 plot_metric = 'mse'
 select_params_metric = 'score'
 select_model_metric = 'score'

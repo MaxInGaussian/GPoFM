@@ -16,13 +16,15 @@ BEST_MODEL_PATH = 'boston.pkl'
 
 
 ############################ Prior Setting ############################
-use_models = ['GPoTAF']
-num = 5
-reps = 20
+use_models = ['GPoFF', 'GPoAF', 'GPoHF']
+reps = 50
 penalty = 1.
-nfeats_range = [10, num*10]
+feats_num = 5
+feats_base = 15
+nfeats_range = [feats_base, feats_num*feats_base]
 nfeats_length = nfeats_range[1]-nfeats_range[0]
-nfeats_choice = [nfeats_range[0]+(i*nfeats_length)//(num-1) for i in range(num)]
+nfeats_choice = [nfeats_range[0]+(i*nfeats_length)//(feats_num-1)
+    for i in range(feats_num)]
 plot_metric = 'mse'
 select_params_metric = 'nmse'
 select_model_metric = 'score'
@@ -151,7 +153,7 @@ for i, nfeats in enumerate(nfeats_choice):
     import os
     if not os.path.exists('plots'):
         os.mkdir('plots')
-    fig.clf()
+    fig = plt.figure(facecolor='white', dpi=120)
     ax = fig.add_subplot(111)
     for en, (metric_name, metric_result) in evals.items():
         maxv, minv = 0, 1e5
