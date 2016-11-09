@@ -50,7 +50,7 @@ Bostion Housing
 ![BostonHousingMSE](examples/boston_housing/plots/mse.png?raw=true "Boston Housing MSE")
 ![BostonHousingNMSE](examples/boston_housing/plots/nmse.png?raw=true "Boston Housing NMSE")
 ![BostonHousingMNLP](examples/boston_housing/plots/mnlp.png?raw=true "Boston Housing MNLP")
-![BostonHousingTime](examples/boston_housing/plots/time(s).png?raw=true "Boston Housing Time")
+![BostonHousingTime](examples/boston_housing/plots/time.png?raw=true "Boston Housing Time")
 <h2 align="center">
 Abalone
 </h2>
@@ -58,7 +58,7 @@ Abalone
 ![AbaloneMSE](examples/abalone/plots/mse.png?raw=true "Abalone MSE")
 ![AbaloneNMSE](examples/abalone/plots/nmse.png?raw=true "Abalone NMSE")
 ![AbaloneMNLP](examples/abalone/plots/mnlp.png?raw=true "Abalone MNLP")
-![AbaloneTime](examples/abalone/plots/time(s).png?raw=true "Abalone Time")
+![AbaloneTime](examples/abalone/plots/time.png?raw=true "Abalone Time")
 <h2 align="center">
 Kin8nm
 </h2>
@@ -66,7 +66,7 @@ Kin8nm
 ![Kin8nmMSE](examples/kin8nm/plots/mse.png?raw=true "Kin8nm MSE")
 ![Kin8nmNMSE](examples/kin8nm/plots/nmse.png?raw=true "Kin8nm NMSE")
 ![Kin8nmMNLP](examples/kin8nm/plots/mnlp.png?raw=true "Kin8nm MNLP")
-![Kin8nmTime](examples/kin8nm/plots/time(s).png?raw=true "Kin8nm Time")
+![Kin8nmTime](examples/kin8nm/plots/time.png?raw=true "Kin8nm Time")
 
 #License
 Copyright (c) 2016, Max W. Y. Lam
