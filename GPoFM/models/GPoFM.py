@@ -278,7 +278,7 @@ class Model(object):
         cvrg_tol = 1e-4 if 'cvrg_tol' not in args.keys() else args['cvrg_tol']
         max_cvrg = 18 if 'max_cvrg' not in args.keys() else args['max_cvrg']
         max_iter = 500 if 'max_iter' not in args.keys() else args['max_iter']
-        dropout = 0.5 if 'dropout' not in args.keys() else args['dropout']
+        dropout = 1. if 'dropout' not in args.keys() else args['dropout']
         if(opt_algo['algo'] not in Optimizer.algos):
             opt_algo = {
                 'algo': 'adam',

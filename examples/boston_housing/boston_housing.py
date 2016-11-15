@@ -15,7 +15,7 @@ from GPoFM import *
 BEST_MODEL_PATH = 'boston.pkl'
 
 ############################ Prior Setting ############################
-use_models = ['GPoFour', 'GPoReLU', 'GPoTanh']
+use_models = ['GPoMax', 'GPoReLU', 'GPoTanh']
 reps = 50
 penalty = 0.5
 dropout = 1.
