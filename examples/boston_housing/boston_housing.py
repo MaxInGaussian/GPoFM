@@ -47,8 +47,8 @@ opt_params = {
     'dropout': dropout,
     'cv_nfolds': 3,
     'cvrg_tol': 1e-5,
-    'max_cvrg': 8,
-    'max_iter': 200
+    'max_cvrg': 28,
+    'max_iter': 400
 }
 evals = {
     'score': [
