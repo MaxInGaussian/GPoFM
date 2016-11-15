@@ -43,7 +43,7 @@ which in turns require careful regularization on optimization.
 | Abalone | 10 | 3133 | 1044 |
 | Kin8nm | 10 | 5000 | 3192 |
 
-<h2 align="center">
+<h2 align="left">
 Bostion Housing
 </h2>
 ![BostonHousingMAE](examples/boston_housing/plots/mae.png?raw=true "Boston Housing MAE")
@@ -51,7 +51,7 @@ Bostion Housing
 ![BostonHousingNMSE](examples/boston_housing/plots/nmse.png?raw=true "Boston Housing NMSE")
 ![BostonHousingMNLP](examples/boston_housing/plots/mnlp.png?raw=true "Boston Housing MNLP")
 ![BostonHousingTime](examples/boston_housing/plots/time.png?raw=true "Boston Housing Time")
-<h2 align="center">
+<h2 align="left">
 Abalone
 </h2>
 ![AbaloneMAE](examples/abalone/plots/mae.png?raw=true "Abalone MAE")
@@ -59,7 +59,7 @@ Abalone
 ![AbaloneNMSE](examples/abalone/plots/nmse.png?raw=true "Abalone NMSE")
 ![AbaloneMNLP](examples/abalone/plots/mnlp.png?raw=true "Abalone MNLP")
 ![AbaloneTime](examples/abalone/plots/time.png?raw=true "Abalone Time")
-<h2 align="center">
+<h2 align="left">
 Kin8nm
 </h2>
 ![Kin8nmMAE](examples/kin8nm/plots/mae.png?raw=true "Kin8nm MAE")

@@ -15,11 +15,13 @@ from GPoFM import *
 BEST_MODEL_PATH = 'kin8nm.pkl'
 
 ############################ Prior Setting ############################
-use_models = ['GPoFF', 'GPoAF']
+use_models = ['GPoFour', 'GPoReLU', 'GPoTanh']
 reps = 50
-penalty = 1.
+penalty = 0.5
+dropout = 1.
+transform = True
 feats_num = 5
-feats_base = 35
+feats_base = 15
 nfeats_range = [feats_base, feats_num*feats_base]
 nfeats_length = nfeats_range[1]-nfeats_range[0]
 nfeats_choice = [nfeats_range[0]+(i*nfeats_length)//(feats_num-1)
@@ -42,7 +44,8 @@ algo = {
 opt_params = {
     'obj': select_params_metric,
     'algo': algo,
-    'cv_nfolds': 5,
+    'dropout': dropout,
+    'cv_nfolds': 3,
     'cvrg_tol': 1e-5,
     'max_cvrg': 8,
     'max_iter': 200
@@ -116,14 +119,14 @@ def load_data(prop=3192./8192):
     return X_train, y_train, X_test, y_test
 
 ############################ Training Phase ############################
-X_train, y_train, X_test, y_test = load_data()
 for i, nfeats in enumerate(nfeats_choice):
     for model_name in use_models:
         ModelClass = getattr(sys.modules['GPoFM'], model_name)
         funcs = None
         results = {en:[] for en in evals.keys()}
         for round in range(reps):
-            model = GPoFM(ModelClass(nfeats=nfeats, penalty=penalty))
+            X_train, y_train, X_test, y_test = load_data()
+            model = GPoFM(ModelClass(nfeats, penalty, transform))
             model.optimize(X_train, y_train, funcs, visualizer, **opt_params)
             if(funcs is None):
                 funcs = model.get_compiled_funcs()
@@ -172,7 +175,7 @@ for i, nfeats in enumerate(nfeats_choice):
         plt.title(metric_name, fontsize=18)
         handles, labels = ax.get_legend_handles_labels()
         ax.legend(handles, labels, loc='upper right', ncol=3, fancybox=True)
-        plt.xlabel('Number of Features', fontsize=13)
+        plt.xlabel('Optimized Features', fontsize=13)
         plt.ylabel(en, fontsize=13)
         plt.savefig('plots/'+en.lower()+'.png')
         ax.cla()

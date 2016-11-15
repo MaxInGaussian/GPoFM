@@ -73,11 +73,9 @@ class Model(object):
     setting, verbose, evals_ind, M, N, D = {'id':''}, False, -1, -1, -1, -1
     X, y, X_Trans, y_Trans, params, compiled_funcs, trained_mats = [None]*7
     
-    def __init__(self, **args):
-        nfeats = 50 if 'nfeats' not in args.keys() else args['nfeats']
-        penalty = 1e-1 if 'penalty' not in args.keys() else args['penalty']
-        Xt = 'min-max' if 'X_trans' not in args.keys() else args['X_trans']
-        yt = 'min-max' if 'y_trans' not in args.keys() else args['y_trans']
+    def __init__(self, nfeats=50, penalty=1., transform=True, **args):
+        Xt = 'normal' if 'X_trans' not in args.keys() else args['X_trans']
+        yt = 'normal' if 'y_trans' not in args.keys() else args['y_trans']
         verbose = False if 'verbose' not in args.keys() else args['verbose']
         self.trans = {'X': Transformer(Xt), 'y': Transformer(yt)}
         self.verbose = verbose
@@ -87,6 +85,7 @@ class Model(object):
         self.setting['id'] = self.__class__.__name__+'-'+rand_str
         self.setting['nfeats'] = nfeats
         self.setting['penalty'] = penalty
+        self.setting['transform'] = transform
         self.evals = {
             'score': ['Model Selection Score', []],
             'obj': ['Params Optimization Objective', []],
@@ -180,7 +179,7 @@ class Model(object):
     def pack_pred_func_inputs(self, Xs):
         return [Xs, self.trained_mats['alpha'], self.trained_mats['Li']]
 
-    def compile_theano_funcs(self, opt_algo, opt_params):
+    def compile_theano_funcs(self, opt_algo, opt_params, dropout):
         self.compiled_funcs = {}
         # Compile Train & Optimization Function
         eps, S = 1e-6, self.setting['nfeats']
@@ -189,6 +188,9 @@ class Model(object):
         X = self.theano_input_data(params)
         y = self.theano_output_data(params)
         sig2_n, sig2_f, FF, Phi = self.feature_maps(X, params)
+        srng = TT.shared_randomstreams.RandomStreams(npr.randint(888))
+        mask = srng.binomial(n=1, p=dropout, size=Phi.shape)
+        Phi = Phi*mask
         PhiTPhi = TT.dot(Phi.T, Phi)
         W = (sig2_n+eps)*TT.identity_like(PhiTPhi)
         A = PhiTPhi+W
@@ -217,6 +219,7 @@ class Model(object):
         Li, alpha = TT.dmatrices('Li', 'alpha')
         Xs = self.theano_input_data(params)
         sig2_n, _, _, Phis = self.feature_maps(Xs, params)
+        Phis = Phis*dropout
         mu_pred = TT.dot(Phis, alpha)
         std_pred = ((sig2_n*(1+(TT.dot(Phis, Li.T)**2).sum(1)))**0.5)[:, None]
         up_bnd = self.theano_output_data(params, mu_pred+std_pred)
@@ -259,7 +262,7 @@ class Model(object):
                 if(metric == 'obj' or metric == 'time'):
                     continue
                 cv_evals_sum[metric].append(self.evals[metric][1].pop())
-        self.fit(X, y, True)
+        self.fit(X, y, False)
         cv_evals_sum['time'].append(time.time()-self.train_start_time)
         cv_evals_sum['obj'].append(self.trained_mats['obj'])
         for metric in self.evals.keys():
@@ -275,6 +278,7 @@ class Model(object):
         cvrg_tol = 1e-4 if 'cvrg_tol' not in args.keys() else args['cvrg_tol']
         max_cvrg = 18 if 'max_cvrg' not in args.keys() else args['max_cvrg']
         max_iter = 500 if 'max_iter' not in args.keys() else args['max_iter']
+        dropout = 0.5 if 'dropout' not in args.keys() else args['dropout']
         if(opt_algo['algo'] not in Optimizer.algos):
             opt_algo = {
                 'algo': 'adam',
@@ -289,7 +293,8 @@ class Model(object):
             self.evals[metric][1] = []
         if(funcs is None):
             self.echo('-'*80, '\nCompiling theano functions...')
-            self.compile_theano_funcs(opt_algo['algo'], opt_algo['algo_params'])
+            algo, algo_params = opt_algo['algo'], opt_algo['algo_params']
+            self.compile_theano_funcs(algo, algo_params, dropout)
             self.echo('done.')
         else:
             self.compiled_funcs = funcs

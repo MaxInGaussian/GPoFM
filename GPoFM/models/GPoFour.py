@@ -9,28 +9,30 @@ import sys, os, string, time
 import numpy as np
 import numpy.random as npr
 import matplotlib.pyplot as plt
+from theano import config as Tc
 from theano import tensor as TT
 from theano.sandbox import linalg as Tlin
 
 from . import Model
 
 __all__ = [
-    "GPoFF",
-    "GPoTFF",
+    "GPoFour",
 ]
 
-class GPoFF(Model):
+class GPoFour(Model):
     
     '''
-    The :class:`GPoFF` class implemented a GPoFM model:
-        Gaussian process Optimizing Fourier Feature Maps (GPoFF)
+    The :class:`GPoFour` class implemented a GPoFM model:
+        Gaussian process Optimizing Fourier Feature Maps (GPoFour)
     
     Parameters
     ----------
     nfeats : an integer
         Number of Fourier Features
     penalty : a float
-        Penalty for too complex function. default: 1.
+        Penalty for prevention of overfitting
+    transform : a bool
+        Idicator that determines whether tranform the data before training
     X_trans : a string
         Transformation method used for inputs of training data
     y_trans : a string
@@ -41,19 +43,24 @@ class GPoFF(Model):
     
     setting, compiled_funcs = None, None
     
-    def __init__(self, **args):
-        super(GPoFF, self).__init__(**args)
+    def __init__(self, nfeats, penalty=1., transform=True, **args):
+        super(GPoFour, self).__init__(nfeats, penalty, transform, **args)
     
     def __str__(self):
-        return "GPoFF (Fourier = %d)"%(self.setting['nfeats'])
+        return "GPoFour (Cos = %d)"%(self.setting['nfeats'])
 
     def randomized_params(self):
         S = self.setting['nfeats']
+        rand_params = []
         const = npr.randn(2)*1e-2
         l = npr.randn(self.D)
         f = npr.randn(self.D*S)
         p = 2*np.pi*npr.rand(S)
-        return [const, l, f, p]
+        rand_params = [const, l, f, p]
+        if(self.setting['transform']):
+            lm = 2*np.pi*npr.rand(self.D+1)
+            rand_params.append(lm)
+        return rand_params
     
     def feature_maps(self, X, params):
         t_ind, S = 0, self.setting['nfeats']
@@ -63,42 +70,16 @@ class GPoFF(Model):
         f = params[t_ind:t_ind+self.D*S]; t_ind+=self.D*S
         F = TT.reshape(f, (self.D, S))/np.exp(l[:, None])
         p = params[t_ind:t_ind+S]; t_ind+=S
-        P = TT.reshape(p, (1, S))-TT.mean(F, 0)[None, :]
+        P = TT.reshape(p, (1, S))
         FF = TT.dot(X, F)+P
-        Phi = TT.cos(FF)*TT.sqrt(sig2_f/S)
+        Phi = TT.cos(FF)*TT.sqrt(sig2_f/FF.shape[1])
         if(type(X) == TT.TensorVariable):
             return sig2_n, sig2_f, FF, Phi
         return Phi
-
-class GPoTFF(GPoFF):
-    
-    '''
-    The :class:`GPoTFF` class implemented a GPoFM model:
-        Gaussian process Optimizing Transformed Fourier Feature Maps (GPoTFF)
-    
-    Parameters
-    ----------
-    nfeats : an integer
-        Number of Fourier Features (nfeats > ncorr)
-    penalty : a float
-        Penalty for too complex function. default: 1.
-    X_trans : a string
-        Transformation method used for inputs of training data
-    y_trans : a string
-        Transformation method used for outpus of training data
-    verbose : a bool
-        Idicator that determines whether printing training message or not
-    '''
-    
-    setting, compiled_funcs = None, None
-    
-    def __init__(self, **args):
-        super(GPoTFF, self).__init__(**args)
-    
-    def __str__(self):
-        return "GPoTFF (Fourier = %d)"%(self.setting['nfeats'])
-
+        
     def transform_inputs(self, params):
+        if(not self.setting['transform']):
+            return super(GPoFour, self).transform_inputs(params)
         sign = lambda x: TT.tanh(x*1e3)
         cdf = lambda x: .5*(1+T.erf(x/T.sqrt(2+epsilon)+epsilon))
         X = TT.dmatrices('X')
@@ -107,6 +88,8 @@ class GPoTFF(GPoFF):
         return cdf(X)
 
     def transform_outputs(self, params, inverse=None):
+        if(not self.setting['transform']):
+            return super(GPoFour, self).transform_outputs(params)
         sign = lambda x: TT.tanh(x*1e3)
         y_lm = params[-1]
         if(inverse is not None):
@@ -116,7 +99,3 @@ class GPoTFF(GPoFF):
         y = TT.dmatrices('y')
         ty = (sign(y)*TT.sqrt(y**2)**y_lm-1)/y_lm
         return y
-
-    def randomized_params(self):
-        lm = 2*np.pi*npr.rand(self.D+1)
-        return super(GPoTFF, self).randomized_params()+[lm]
