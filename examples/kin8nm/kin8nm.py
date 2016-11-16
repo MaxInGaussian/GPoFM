@@ -170,7 +170,7 @@ for i, nfeats in enumerate(nfeats_choice):
                 yerr=[metric_result[model_name][j][1] for j in range(i+1)],
                 fmt='o', capsize=6, label=model_name, alpha=0.6)
         ax.set_xlim([min(nfeats_choice)-10, max(nfeats_choice)+10])
-        ax.set_ylim([minv-(maxv-minv)*0.2,maxv+(maxv-minv)*0.2])
+        ax.set_ylim([minv-abs(maxv-minv)*0.2,maxv+abs(maxv-minv)*0.2])
         ax.grid(True)
         plt.title(metric_name, fontsize=18)
         handles, labels = ax.get_legend_handles_labels()

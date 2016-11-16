@@ -189,7 +189,7 @@ class Model(object):
         y = self.theano_output_data(params)
         sig2_n, sig2_f, FF, Phi = self.feature_maps(X, params)
         srng = TT.shared_randomstreams.RandomStreams(npr.randint(888))
-        mask = srng.binomial(n=1, p=dropout, size=Phi.shape)
+        mask = srng.binomial(n=1, p=dropout, size=(1, Phi.shape[1]))
         Phi = Phi*mask
         PhiTPhi = TT.dot(Phi.T, Phi)
         W = (sig2_n+eps)*TT.identity_like(PhiTPhi)
@@ -198,7 +198,7 @@ class Model(object):
         Li = Tlin.matrix_inverse(L)
         PhiTy = Phi.T.dot(y)
         beta = TT.dot(Li, PhiTy)
-        alpha = TT.dot(Li.T, beta)
+        alpha = TT.dot(Li.T, beta)*mask.T
         mu_f = TT.dot(Phi, alpha)
         mu_w = TT.mean(FF, axis=1)
         sig_w = TT.std(FF, axis=1)
@@ -219,8 +219,7 @@ class Model(object):
         Li, alpha = TT.dmatrices('Li', 'alpha')
         Xs = self.theano_input_data(params)
         sig2_n, _, _, Phis = self.feature_maps(Xs, params)
-        Phis = Phis*dropout
-        mu_pred = TT.dot(Phis, alpha)
+        mu_pred = TT.dot(Phis, alpha*dropout)
         std_pred = ((sig2_n*(1+(TT.dot(Phis, Li.T)**2).sum(1)))**0.5)[:, None]
         up_bnd = self.theano_output_data(params, mu_pred+std_pred)
         lw_bnd = self.theano_output_data(params, mu_pred-std_pred)
