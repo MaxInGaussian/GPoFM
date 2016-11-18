@@ -70,7 +70,8 @@ class Model(object):
         Idicator that determines whether printing training message or not
     '''
 
-    setting, verbose, evals_ind, M, N, D = {'id':''}, False, -1, -1, -1, -1
+    setting, unfitted, verbose = {'id':''}, True, True
+    evals_ind, M, N, D = -1, -1, -1, -1
     X, y, X_Trans, y_Trans, params, compiled_funcs, trained_mats = [None]*7
     
     def __init__(self, nfeats=50, penalty=1., transform=True, **args):
@@ -143,6 +144,7 @@ class Model(object):
         return self.compiled_funcs
 
     def fit(self, X, y, update_params=False):
+        self.unfitted = False
         self.Xt = self.trans['X'].transform(X)
         self.yt = self.trans['y'].transform(y)
         self.N, self.D = self.Xt.shape
@@ -254,7 +256,7 @@ class Model(object):
         for train, valid in ss.split(X):
             Xt, yt = X[train], y[train]
             Xv, yv = X[valid], y[valid]
-            self.fit(Xt, yt, False)
+            self.fit(Xt, yt, self.unfitted)
             cv_evals_sum['obj'].append(self.trained_mats['obj'])
             self.score(Xv, yv)
             for metric in self.evals.keys():
