@@ -254,14 +254,14 @@ class Model(object):
         for train, valid in ss.split(X):
             Xt, yt = X[train], y[train]
             Xv, yv = X[valid], y[valid]
-            self.fit(Xt, yt, True)
+            self.fit(Xt, yt, False)
             cv_evals_sum['obj'].append(self.trained_mats['obj'])
             self.score(Xv, yv)
             for metric in self.evals.keys():
                 if(metric == 'obj' or metric == 'time'):
                     continue
                 cv_evals_sum[metric].append(self.evals[metric][1].pop())
-        self.fit(X, y, False)
+        self.fit(X, y, True)
         cv_evals_sum['time'].append(time.time()-self.train_start_time)
         cv_evals_sum['obj'].append(self.trained_mats['obj'])
         for metric in self.evals.keys():
