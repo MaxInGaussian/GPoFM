@@ -70,7 +70,7 @@ class Model(object):
         Idicator that determines whether printing training message or not
     '''
 
-    setting, unfitted, verbose = {'id':''}, True, True
+    setting, verbose = {'id':''}, True
     evals_ind, M, N, D = -1, -1, -1, -1
     X, y, X_Trans, y_Trans, params, compiled_funcs, trained_mats = [None]*7
     
@@ -144,7 +144,6 @@ class Model(object):
         return self.compiled_funcs
 
     def fit(self, X, y, update_params=False):
-        self.unfitted = False
         self.Xt = self.trans['X'].transform(X)
         self.yt = self.trans['y'].transform(y)
         self.N, self.D = self.Xt.shape
@@ -190,9 +189,10 @@ class Model(object):
         X = self.theano_input_data(params)
         y = self.theano_output_data(params)
         sig2_n, sig2_f, FF, Phi = self.feature_maps(X, params)
-        srng = TT.shared_randomstreams.RandomStreams(npr.randint(888))
-        mask = srng.binomial(n=1, p=dropout, size=(1, Phi.shape[1]))
-        Phi = Phi*mask
+        if(dropout < 1.):
+            srng = TT.shared_randomstreams.RandomStreams(npr.randint(888))
+            mask = srng.binomial(n=1, p=dropout, size=Phi.shape)
+            Phi = Phi*mask
         PhiTPhi = TT.dot(Phi.T, Phi)
         W = (sig2_n+eps)*TT.identity_like(PhiTPhi)
         A = PhiTPhi+W
@@ -200,7 +200,7 @@ class Model(object):
         Li = Tlin.matrix_inverse(L)
         PhiTy = Phi.T.dot(y)
         beta = TT.dot(Li, PhiTy)
-        alpha = TT.dot(Li.T, beta)*mask.T
+        alpha = TT.dot(Li.T, beta)
         mu_f = TT.dot(Phi, alpha)
         mu_w = TT.mean(FF, axis=1)
         sig_w = TT.std(FF, axis=1)
@@ -256,14 +256,14 @@ class Model(object):
         for train, valid in ss.split(X):
             Xt, yt = X[train], y[train]
             Xv, yv = X[valid], y[valid]
-            self.fit(Xt, yt, self.unfitted)
+            self.fit(Xt, yt, True)
             cv_evals_sum['obj'].append(self.trained_mats['obj'])
             self.score(Xv, yv)
             for metric in self.evals.keys():
                 if(metric == 'obj' or metric == 'time'):
                     continue
                 cv_evals_sum[metric].append(self.evals[metric][1].pop())
-        self.fit(X, y, True)
+        self.fit(X, y, False)
         cv_evals_sum['time'].append(time.time()-self.train_start_time)
         cv_evals_sum['obj'].append(self.trained_mats['obj'])
         for metric in self.evals.keys():

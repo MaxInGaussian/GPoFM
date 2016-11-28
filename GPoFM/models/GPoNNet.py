@@ -235,7 +235,7 @@ class GPoMax(Model):
         P = TT.reshape(p, (1, S))-TT.mean(F, 0)[None, :]
         FF = TT.dot(X, F)+P
         Phi = TT.max(FF, axis=1)[:, None]
-        for i in range(1, int(S*0.5)):
+        for i in range(1, int(S*0.8)):
             Phi = TT.concatenate((
                 TT.max(FF[:, i:], axis=1)[:, None], Phi), axis=1)
         Phi = Phi*TT.sqrt(sig2_f/FF.shape[1])

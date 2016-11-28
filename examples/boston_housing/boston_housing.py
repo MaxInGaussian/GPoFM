@@ -20,7 +20,7 @@ reps = 50
 penalty = 0.5
 dropout = 1.
 transform = True
-feats_num = 8
+feats_num = 6
 feats_base = 15
 nfeats_range = [feats_base, feats_num*feats_base]
 nfeats_length = nfeats_range[1]-nfeats_range[0]
@@ -45,7 +45,7 @@ opt_params = {
     'obj': select_params_metric,
     'algo': algo,
     'dropout': dropout,
-    'cv_nfolds': 3,
+    'cv_nfolds': 4,
     'cvrg_tol': 1e-5,
     'max_cvrg': 28,
     'max_iter': 400
