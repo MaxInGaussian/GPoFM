@@ -8,7 +8,6 @@ Author: Max W. Y. Lam [maxingaussian@gmail.com]
 import sys, os, string, time
 import numpy as np
 import numpy.random as npr
-import matplotlib.pyplot as plt
 from theano import config as Tc
 from theano import tensor as TT
 from theano.sandbox import linalg as Tlin

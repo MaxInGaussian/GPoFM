@@ -249,14 +249,14 @@ class Model(object):
         self.evals['score'][1].append(score)
         return score
 
-    def cross_validate(self, X, y, nfolds):
+    def cross_validate(self, X, y, nfolds, change=True):
         from sklearn.model_selection import ShuffleSplit
         ss = ShuffleSplit(n_splits=nfolds, random_state=npr.randint(888))
         cv_evals_sum = {metric: [] for metric in self.evals.keys()}
         for train, valid in ss.split(X):
             Xt, yt = X[train], y[train]
             Xv, yv = X[valid], y[valid]
-            self.fit(Xt, yt, True)
+            self.fit(Xt, yt, change)
             cv_evals_sum['obj'].append(self.trained_mats['obj'])
             self.score(Xv, yv)
             for metric in self.evals.keys():
@@ -302,7 +302,7 @@ class Model(object):
         if(visualizer is not None):
             visualizer.model = self
             animate = visualizer.train_plot()
-        self.evals_ind = 0
+        self.evals_ind = -1
         self.train_start_time = time.time()
         min_obj, min_obj_val = np.Infinity, np.Infinity
         argmin_params, cvrg_iter = self.params, 0
@@ -321,7 +321,7 @@ class Model(object):
                     cvrg_iter = 0
                 min_obj = self.evals['obj'][1][-1]
                 min_obj_val = obj_val
-                self.evals_ind = len(self.evals['obj'][1])-1
+                # self.evals_ind = len(self.evals['obj'][1])-1
                 argmin_params = self.params.copy()
             else:
                 cvrg_iter += 1
@@ -331,7 +331,7 @@ class Model(object):
                 randp = np.random.rand()*cvrg_iter/max_cvrg*0.5
                 self.params = (1-randp)*self.params+randp*argmin_params
         self.params = argmin_params.copy()
-        self.cross_validate(X, y, cv_nfolds)
+        self.cross_validate(X, y, cv_nfolds, False)
         self.evals_ind = -1
         verbose = self.verbose
         self.verbose = True

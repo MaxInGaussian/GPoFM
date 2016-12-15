@@ -1,0 +1,31 @@
+Feature Name,Feature Description,Behavior Interpretation
+stfp,Stop Time of the First Pentagon,Stop and Think (First Half)
+stsp,Stop Time of the Second Pentagon,Stop and Think (Second Half)
+itfp,Ink Time of the First Pentagon,Draw and Think (First Half)
+itsp,Ink Time of the Second Pentagon,Draw and Think (Second Half)
+itp-avg,Ink Time per Pixel (Average),Draw and Think in an instance
+itp-max,Ink Time per Pixel (Maximum),
+itp-med,Ink Time per Pixel (Minimum),
+itp-std,Ink Time per Pixel (Standard Deviation),
+its-avg,Ink Time per Stroke (Average),
+its-max,Ink Time per Stroke (Maximum),
+its-min,Ink Time per Stroke (Minimum),
+its-std,Ink Time per Stroke (Standard Deviation),
+idfp,Ink Distance of the First Pentagon,
+idsp,Ink Distance of the Second Pentagon,
+idp-avg,Ink Distance in Pixel scope (Average),
+idp-max,Ink Distance in Pixel scope (Maximum),
+idp-med,Ink Distance in Pixel scope (Minimum),
+idp-std,Ink Distance in Pixel scope (Standard Deviation),
+ids-avg,Ink Distance in Stroke scope (Average),
+ids-max,Ink Distance in Stroke scope (Maximum),
+ids-min,Ink Distance in Stroke scope (Minimum),
+ids-std,Ink Distance in Stroke scope (Standard Deviation),
+dsp-avg,Drawing Speed in Pixel scope (Average),
+dsp-med,Drawing Speed in Pixel scope (Median),
+dsp-max,Drawing Speed in Pixel scope (Maximum),
+dsp-std,Drawing Speed in Pixel scope (Standard Deviation),
+dss-avg,Drawing Speed in Stroke scope (Average),
+dss-min,Drawing Speed in Stroke scope (Minimum),
+dss-max,Drawing Speed in Stroke scope (Maximum),
+dss-std,Drawing Speed in Stroke scope (Standard Deviation),
