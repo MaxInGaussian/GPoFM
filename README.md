@@ -8,18 +8,20 @@ with much flexibility are mostly concerned. In fact, there are uncountable ways
 to define an non-linear function, and it's generally hard to tell which class of
 mathematical functions specifically works for a problem. A machine-learning kind
 of approach is to approximate such a function by 'supervising' data and
-'learning' patterns. In statistical community, this is traditionally coined
+'learning' patterns. In statistics, this is traditionally coined
 'regression'. Although such a data-driven function can be obtained through
 optimization, the optimized models tend to lose generality, which is technically
 regarded as 'overfitting'.
 
 To prevent from overfitting, one feasible approach is to carry out Bayesian
-inference over the distribution of non-linear functions. That is, the desired
-function is assumed to be 'produced' from a particular space. Due to
-mathematical brevity and elegance, Gaussian process is mainly employed to
-describe the distribution over functions. [Carl Edward Rasmussen and Christopher
-K. I. Williams](http://www.gaussianprocess.org/gpml/), who pioneer and
-popularize the idea of using Gaussian processes for machine learning tasks,
+inference over 'the distribution of functions'. In this sense, our desired
+function should be a sample of certain function space. A strictforward approach
+would be defining the distribution of parameters that can specify the class of
+function. Another way would be taking advantages of well-established stochastic
+processes. Due to mathematical brevity and elegance, Gaussian process was
+employed to describe the distribution over functions. [Carl Edward Rasmussen and
+Christopher K. I. Williams](http://www.gaussianprocess.org/gpml/), who pioneer
+and popularize the idea of using Gaussian processes for machine learning tasks,
 emphasize that one of the greatest advantages of Gaussian process is that we can
 integrate all possible functions over the function distribution (Gaussian
 process), and obtain an analytical solution because of nice properties of
