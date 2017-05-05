@@ -19,7 +19,7 @@ for model_name in use_models:
     model.optimize(X_train, y_train, funcs, visualizer, **opt_params)
 ```
 
-## Find the Tailored Trained GPoFM Model
+## Find the Best Trained GPoFM Model
 ```python
 # fit current dataset to original best trained model
 best_model = GPoFM(Model().load(BEST_MODEL_PATH))
