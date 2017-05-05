@@ -12,11 +12,11 @@ Gaussian Process Training with Optimized Feature Maps for Shift-Invariant Kernel
 <h2 align="left">
 Bostion Housing
 </h2>
-![BostonHousingMAE](examples/boston_housing/plots/mae.png?raw=true "Boston Housing MAE")
-![BostonHousingMSE](examples/boston_housing/plots/mse.png?raw=true "Boston Housing MSE")
-![BostonHousingNMSE](examples/boston_housing/plots/nmse.png?raw=true "Boston Housing NMSE")
-![BostonHousingMNLP](examples/boston_housing/plots/mnlp.png?raw=true "Boston Housing MNLP")
-![BostonHousingTime](examples/boston_housing/plots/time.png?raw=true "Boston Housing Time")
+<img src ="examples/boston_housing/plots/mae.png" />
+<img src ="examples/boston_housing/plots/mse.png" />
+<img src ="examples/boston_housing/plots/nmse.png" />
+<img src ="examples/boston_housing/plots/mnlp.png" />
+<img src ="examples/boston_housing/plots/time.png" />
 <h2 align="left">
 Abalone
 </h2>
