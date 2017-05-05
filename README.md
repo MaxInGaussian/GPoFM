@@ -63,6 +63,3 @@ Kin8nm
 <img src ="examples/kin8nm/plots/nmse.png" />
 <img src ="examples/kin8nm/plots/mnlp.png" />
 <img src ="examples/kin8nm/plots/time.png" />
-
-# License
-[License](LICENSE.md)
