@@ -20,19 +20,19 @@ Bostion Housing
 <h2 align="left">
 Abalone
 </h2>
-![AbaloneMAE](examples/abalone/plots/mae.png?raw=true "Abalone MAE")
-![AbaloneMSE](examples/abalone/plots/mse.png?raw=true "Abalone MSE")
-![AbaloneNMSE](examples/abalone/plots/nmse.png?raw=true "Abalone NMSE")
-![AbaloneMNLP](examples/abalone/plots/mnlp.png?raw=true "Abalone MNLP")
-![AbaloneTime](examples/abalone/plots/time.png?raw=true "Abalone Time")
+<img src ="examples/abalone/plots/mae.png" />
+<img src ="examples/abalone/plots/mse.png" />
+<img src ="examples/abalone/plots/nmse.png" />
+<img src ="examples/abalone/plots/mnlp.png" />
+<img src ="examples/abalone/plots/time.png" />
 <h2 align="left">
 Kin8nm
 </h2>
-![Kin8nmMAE](examples/kin8nm/plots/mae.png?raw=true "Kin8nm MAE")
-![Kin8nmMSE](examples/kin8nm/plots/mse.png?raw=true "Kin8nm MSE")
-![Kin8nmNMSE](examples/kin8nm/plots/nmse.png?raw=true "Kin8nm NMSE")
-![Kin8nmMNLP](examples/kin8nm/plots/mnlp.png?raw=true "Kin8nm MNLP")
-![Kin8nmTime](examples/kin8nm/plots/time.png?raw=true "Kin8nm Time")
+<img src ="examples/kin8nm/plots/mae.png" />
+<img src ="examples/kin8nm/plots/mse.png" />
+<img src ="examples/kin8nm/plots/nmse.png" />
+<img src ="examples/kin8nm/plots/mnlp.png" />
+<img src ="examples/kin8nm/plots/time.png" />
 
 # License
 Copyright (c) 2016, Max W. Y. Lam
