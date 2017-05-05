@@ -1,42 +1,6 @@
-#GPoFM
+# GPoFM
 
-GPoFM is a machine learning toolkit designed for predictive modeling of
-complex-structured data. The key of success is to find a tailormade function
-that maps the inputs to the targets. In this sense, linear functions undoubtedly
-would be too simple to solve the problem. Nevertheless, non-linear functions
-with much flexibility are mostly concerned. In fact, there are uncountable ways
-to define an non-linear function, and it's generally hard to tell which class of
-mathematical functions specifically works for a problem. A machine-learning kind
-of approach is to approximate such a function by 'supervising' data and
-'learning' patterns. In statistics, this is traditionally coined
-'regression'. Although such a data-driven function can be obtained through
-optimization, the optimized models tend to lose generality, which is technically
-regarded as 'overfitting'.
-
-To prevent from overfitting, one feasible approach is to carry out Bayesian
-inference over 'the distribution of functions'. In this sense, our desired
-function should be a sample of certain function space. A strictforward approach
-would be defining the distribution of parameters that can specify the class of
-function. Another way would be taking advantages of well-established stochastic
-processes. Due to mathematical brevity and elegance, Gaussian process was
-employed to describe the distribution over functions. [Carl Edward Rasmussen and
-Christopher K. I. Williams](http://www.gaussianprocess.org/gpml/), who pioneer
-and popularize the idea of using Gaussian processes for machine learning tasks,
-emphasize that one of the greatest advantages of Gaussian process is that we can
-integrate all possible functions over the function distribution (Gaussian
-process), and obtain an analytical solution because of nice properties of
-Gaussian. It is pinpointed that this Bayesian routine is prefered over
-optimization on a certain estimate of function.
-
-The idea of GPoFM came from [Quasi-Monte Carlo Feature Maps](http://jmlr.org/papers/volume17/14-538/14-538.pdf)
-and [Fourier features](https://papers.nips.cc/paper/3182-random-features-for-large-scale-kernel-machines.pdf)
-, in which the feature maps are obtained by sampling on the frequency distribution corresponding to a pre-determined
-kernel function. In this setup, the randomized feature maps is no more than an approximation method.
-Yet, in GPoFM, we take a new scope for the association of feature maps and kernel function.
-We treat the feature maps as hyperparameters, and result in optimization of the mapping on the Gaussian process regression likelihood.
-In this sence, we optimize the kernel properties without explicitly define a kernel.
-One significant hurdle of this approach is the explosive amount of hyperparameters,
-which in turns require careful regularization on optimization.
+Gaussian Process Training with Optimized Feature Maps for Shift-Invariant Kernels
 
 # Performance of GPoFM on Benchmark Datasets
 | Benchmark Dataset | Number of Attributes | Size of Training Data | Size of Testing Data |
@@ -70,7 +34,7 @@ Kin8nm
 ![Kin8nmMNLP](examples/kin8nm/plots/mnlp.png?raw=true "Kin8nm MNLP")
 ![Kin8nmTime](examples/kin8nm/plots/time.png?raw=true "Kin8nm Time")
 
-#License
+# License
 Copyright (c) 2016, Max W. Y. Lam
 All rights reserved.
 

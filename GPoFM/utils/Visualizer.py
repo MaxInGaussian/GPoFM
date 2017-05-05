@@ -95,20 +95,23 @@ class Visualizer(object):
             ax = self.fig.add_subplot(111)
             pts = 300
             errors = [0.25, 0.39, 0.52, 0.67, 0.84, 1.04, 1.28, 1.64, 2.2]
-            Xs = np.linspace(0., 1., pts)[:, None]
+            X = np.vstack((self.model.Xt, self.model.Xs))
+            y = np.vstack((self.model.yt, self.model.ys))
+            Xs = np.linspace(np.min(X), np.max(X), pts)[:, None]
             pred_inputs = self.model.pack_pred_func_inputs(Xs)
             predicted_mats = self.model.compiled_funcs['pred'](*pred_inputs)
             predicted_mats = self.model.unpack_predicted_mats(predicted_mats)
             mu, std = predicted_mats['mu_fs'], predicted_mats['std_fs']
             for er in errors:
-                ax.fill_between(Xs[:, 0], mu-er*std, mu+er*std,
+                ax.fill_between(Xs.ravel(), (mu-er*std).ravel(), (mu+er*std).ravel(),
                                 alpha=((3-er)/5.5)**1.7, facecolor='blue',
                                 linewidth=1e-3)
             ax.plot(Xs[:, 0], mu, alpha=0.8, c='black')
             ax.errorbar(self.model.Xt[:, 0],
                 self.model.yt.ravel(), fmt='r.', markersize=5, alpha=0.6)
-            yrng = self.model.yt.max()-self.model.yt.min()
-            ax.set_ylim([self.model.yt.min(), self.model.yt.max()+0.5*yrng])
+            ax.errorbar(self.model.Xs[:, 0],
+                self.model.ys.ravel(), fmt='g.', markersize=5, alpha=0.6)
+            ax.set_ylim([y.min(), y.max()])
             ax.set_xlim([-0.1, 1.1])
             plt.pause(0.1)
         return animate

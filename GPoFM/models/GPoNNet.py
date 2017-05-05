@@ -42,11 +42,11 @@ class GPoReLU(Model):
     
     setting, compiled_funcs = None, None
     
-    def __init__(self, nfeats, penalty=1., transform=True, **args):
-        super(GPoReLU, self).__init__(nfeats, penalty, transform, **args)
+    def __init__(self, nfeats, resolution=0.5, penalty=1., transform=True, **args):
+        super(GPoReLU, self).__init__(nfeats, resolution, penalty, transform, **args)
     
     def __str__(self):
-        return "GPoReLU (Neurons = %d)"%(self.setting['nfeats'])
+        return "GPoReLU (%d, %.2f, %.2f)"%(self.setting['nfeats'], self.setting['resolution'], self.setting['penalty'])
 
     def randomized_params(self):
         S = self.setting['nfeats']
@@ -64,7 +64,7 @@ class GPoReLU(Model):
     def feature_maps(self, X, params):
         t_ind, S = 0, self.setting['nfeats']
         a = params[0]; t_ind+=1; b = params[1]; t_ind+=1
-        sig2_n, sig2_f = TT.exp(2*a), TT.exp(b)
+        sig2_n, sig2_f = 1/(1+TT.exp(a))*self.setting['resolution'], TT.exp(b)
         l = params[t_ind:t_ind+self.D]; t_ind+=self.D
         f = params[t_ind:t_ind+self.D*S]; t_ind+=self.D*S
         F = TT.reshape(f, (self.D, S))/np.exp(l[:, None])
@@ -123,11 +123,11 @@ class GPoTanh(Model):
     
     setting, compiled_funcs = None, None
     
-    def __init__(self, nfeats, penalty=1., transform=True, **args):
-        super(GPoTanh, self).__init__(nfeats, penalty, transform, **args)
+    def __init__(self, nfeats, resolution=0.5, penalty=1., transform=True, **args):
+        super(GPoTanh, self).__init__(nfeats, resolution, penalty, transform, **args)
     
     def __str__(self):
-        return "GPoTanh (Neurons = %d)"%(self.setting['nfeats'])
+        return "GPoTanh (%d, %.2f, %.2f)"%(self.setting['nfeats'], self.setting['resolution'], self.setting['penalty'])
 
     def randomized_params(self):
         S = self.setting['nfeats']
@@ -145,7 +145,7 @@ class GPoTanh(Model):
     def feature_maps(self, X, params):
         t_ind, S = 0, self.setting['nfeats']
         a = params[0]; t_ind += 1; b = params[1]; t_ind += 1
-        sig2_n, sig2_f = TT.exp(a), TT.exp(b)
+        sig2_n, sig2_f = 1/(1+TT.exp(a))*self.setting['resolution'], TT.exp(b)
         l = params[t_ind:t_ind+self.D]; t_ind += self.D
         f = params[t_ind:t_ind+self.D*S]; t_ind += self.D*S
         F = TT.reshape(f, (self.D, S))/np.exp(l[:, None])
@@ -204,11 +204,11 @@ class GPoMax(Model):
     
     setting, compiled_funcs = None, None
     
-    def __init__(self, nfeats, penalty=1., transform=True, **args):
-        super(GPoMax, self).__init__(nfeats, penalty, transform, **args)
+    def __init__(self, nfeats, resolution=0.5, penalty=1., transform=True, **args):
+        super(GPoMax, self).__init__(nfeats, resolution, penalty, transform, **args)
     
     def __str__(self):
-        return "GPoMax (Neurons = %d)"%(self.setting['nfeats'])
+        return "GPoMax (%d, %.2f, %.2f)"%(self.setting['nfeats'], self.setting['resolution'], self.setting['penalty'])
 
     def randomized_params(self):
         S = self.setting['nfeats']
@@ -226,7 +226,7 @@ class GPoMax(Model):
     def feature_maps(self, X, params):
         t_ind, S = 0, self.setting['nfeats']
         a = params[0]; t_ind += 1; b = params[1]; t_ind += 1
-        sig2_n, sig2_f = TT.exp(a), TT.exp(b)
+        sig2_n, sig2_f = 1/(1+TT.exp(a))*self.setting['resolution'], TT.exp(b)
         l = params[t_ind:t_ind+self.D]; t_ind += self.D
         f = params[t_ind:t_ind+self.D*S]; t_ind += self.D*S
         F = TT.reshape(f, (self.D, S))/np.exp(l[:, None])

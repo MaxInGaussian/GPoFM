@@ -74,7 +74,7 @@ class Model(object):
     evals_ind, M, N, D = -1, -1, -1, -1
     X, y, X_Trans, y_Trans, params, compiled_funcs, trained_mats = [None]*7
     
-    def __init__(self, nfeats=50, penalty=1., transform=True, **args):
+    def __init__(self, nfeats=50, resolution=0.5, penalty=1., transform=True, **args):
         Xt = 'normal' if 'X_trans' not in args.keys() else args['X_trans']
         yt = 'normal' if 'y_trans' not in args.keys() else args['y_trans']
         verbose = False if 'verbose' not in args.keys() else args['verbose']
@@ -85,6 +85,7 @@ class Model(object):
         self.setting = {}
         self.setting['id'] = self.__class__.__name__+'-'+rand_str
         self.setting['nfeats'] = nfeats
+        self.setting['resolution'] = resolution
         self.setting['penalty'] = penalty
         self.setting['transform'] = transform
         self.evals = {
@@ -233,7 +234,8 @@ class Model(object):
             givens=[(params, self.params)])
 
     def score(self, X, y):
-        self.Xs, self.ys = X.copy(), y.copy()
+        self.Xs = self.trans['X'].transform(X)
+        self.ys = self.trans['y'].transform(y)
         mu, std = self.predict(X)
         mae = np.mean(np.abs(mu-y))
         self.evals['mae'][1].append(mae)
@@ -249,21 +251,23 @@ class Model(object):
         self.evals['score'][1].append(score)
         return score
 
-    def cross_validate(self, X, y, nfolds, change=True):
-        from sklearn.model_selection import ShuffleSplit
-        ss = ShuffleSplit(n_splits=nfolds, random_state=npr.randint(888))
+    def cross_validate(self, X, y, nfolds, change=True, iter=0, callback=None):
+        from sklearn.model_selection import KFold
+        kf = KFold(n_splits=nfolds, random_state=None)
         cv_evals_sum = {metric: [] for metric in self.evals.keys()}
-        for train, valid in ss.split(X):
+        for train, valid in kf.split(X):
             Xt, yt = X[train], y[train]
             Xv, yv = X[valid], y[valid]
             self.fit(Xt, yt, change)
             cv_evals_sum['obj'].append(self.trained_mats['obj'])
             self.score(Xv, yv)
+            if(callback is not None):
+                callback(iter)
             for metric in self.evals.keys():
                 if(metric == 'obj' or metric == 'time'):
                     continue
                 cv_evals_sum[metric].append(self.evals[metric][1].pop())
-        self.fit(X, y, False)
+        self.fit(X, y, change)
         cv_evals_sum['time'].append(time.time()-self.train_start_time)
         cv_evals_sum['obj'].append(self.trained_mats['obj'])
         for metric in self.evals.keys():
@@ -307,12 +311,11 @@ class Model(object):
         min_obj, min_obj_val = np.Infinity, np.Infinity
         argmin_params, cvrg_iter = self.params, 0
         for iter in range(max_iter):
-            self.cross_validate(X, y, cv_nfolds)
+            self.cross_validate(X, y, cv_nfolds, iter=iter,
+                callback=None if(visualizer is None) else animate)
             if(iter%(max_iter//10) == 1):
                 self.echo('-'*26, 'VALIDATION ITERATION', iter, '-'*27)
                 self._print_current_evals()
-            if(visualizer is not None):
-                animate(iter)
             obj_val = self.evals[obj_type][1][-1]
             if(obj_val < min_obj_val):
                 if(min_obj_val-obj_val < cvrg_tol):

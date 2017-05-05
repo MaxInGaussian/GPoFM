@@ -17,7 +17,8 @@ BEST_MODEL_PATH = 'boston.pkl'
 ############################ Prior Setting ############################
 use_models = ['GPoMax', 'GPoReLU', 'GPoTanh']
 reps = 50
-penalty = 0.5
+resolution = 0.5
+penalty = 1.
 dropout = 1.
 transform = True
 feats_num = 6
@@ -126,7 +127,7 @@ for i, nfeats in enumerate(nfeats_choice):
         results = {en:[] for en in evals.keys()}
         for round in range(reps):
             X_train, y_train, X_test, y_test = load_data()
-            model = GPoFM(ModelClass(nfeats, penalty, transform))
+            model = GPoFM(ModelClass(nfeats, resolution, penalty, transform))
             model.optimize(X_train, y_train, funcs, visualizer, **opt_params)
             if(funcs is None):
                 funcs = model.get_compiled_funcs()
