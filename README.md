@@ -1,6 +1,6 @@
 # GPoFM
 
-Gaussian Process Training with Optimized Feature Maps for Shift-Invariant Kernels
+Gaussian Process Training with Optimized Feature Maps for Shift-Invariant Kernel
 
 ## Installation
 
