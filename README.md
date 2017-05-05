@@ -2,7 +2,7 @@
 
 Gaussian Process Training with Optimized Feature Maps for Shift-Invariant Kernels
 
-# Performance of GPoFM on Benchmark Datasets
+# Performances on Benchmark Regression Datasets
 | Benchmark Dataset | Number of Attributes | Size of Training Data | Size of Testing Data |
 | :---: | :---: | :---: | :---: |
 | Bostion Housing | 13 | 400 | 106 |
