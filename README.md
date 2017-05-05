@@ -2,14 +2,14 @@
 
 Gaussian Process Training with Optimized Feature Maps for Shift-Invariant Kernels
 
-### Installation
+## Installation
 
 To install GomPlex, clone this repo:
 
     $ git clone https://github.com/MaxInGaussian/GomPlex.git
     $ python setup.py install
 
-### Train GPoFM with Different Feature Mapping
+## Train GPoFM with Different Feature Mapping
 ```python
 from GPoFM import *
 use_models = ['GPoMax', 'GPoReLU', 'GPoTanh']
@@ -19,7 +19,7 @@ for model_name in use_models:
     model.optimize(X_train, y_train, funcs, visualizer, **opt_params)
 ```
 
-### Find the Tailored Trained GPoFM Model
+## Find the Tailored Trained GPoFM Model
 ```python
 # fit current dataset to original best trained model
 best_model = GPoFM(Model().load(BEST_MODEL_PATH))
